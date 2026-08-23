@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: foodbridge-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - foodbridge_db:/app/backend/db
+      - foodbridge_uploads:/app/backend/uploads
+    environment:
+      - DATABASE_URL=sqlite:///./db/foodbridge.db
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        VITE_API_BASE_URL: /api
+    container_name: foodbridge-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  foodbridge_db:
+  foodbridge_uploads:
