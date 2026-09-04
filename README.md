@@ -1,110 +1,77 @@
 # FoodBridge
 
-### An Intelligent AI-Driven Platform for Surplus Food Redistribution, Demand Forecasting, and Expiry-Aware Logistics
+<p align="center">
+  <strong>An Intelligent AI-Driven Platform for Surplus Food Redistribution, Demand Forecasting, and Expiry-Aware Logistics</strong>
+</p>
 
-FoodBridge is a real-time food donation redistribution platform designed to reduce food wastage by intelligently connecting food donors with NGOs and volunteers.
-
-The platform combines food-risk estimation, intelligent donor-NGO matching, expiry-aware logistics, volunteer allocation, real-time GPS tracking, demand forecasting, and an AI-powered conversational assistant into a unified system.
-
----
-
-## 📌 Project Overview
-
-Large quantities of surplus food from restaurants, events, institutions, households, and other sources are discarded because suitable recipients and transportation cannot always be identified within the food's safe consumption window.
-
-FoodBridge addresses this problem through an integrated digital platform that coordinates:
-
-**Donor → NGO → Volunteer → Delivery**
-
-The system evaluates donated food, identifies suitable NGOs, recommends the most appropriate recipient, automatically assigns an eligible volunteer after NGO acceptance, and tracks the delivery using real-time GPS.
+<p align="center">
+  <img src="https://img.shields.io/badge/React-Vite-blue" alt="React">
+  <img src="https://img.shields.io/badge/FastAPI-Python-green" alt="FastAPI">
+  <img src="https://img.shields.io/badge/Database-SQLite-blue" alt="SQLite">
+  <img src="https://img.shields.io/badge/ML-XGBoost%20%7C%20LSTM-orange" alt="ML">
+  <img src="https://img.shields.io/badge/Maps-Google%20Maps-red" alt="Google Maps">
+  <img src="https://img.shields.io/badge/Real--Time-WebSocket-purple" alt="WebSocket">
+</p>
 
 ---
 
-## 🎯 Objectives
+## 📌 Table of Contents
 
-The major objectives of FoodBridge are:
-
-- Reduce surplus food wastage.
-- Connect food donors with suitable NGOs in real time.
-- Estimate food spoilage and risk using software-based analysis.
-- Consider food quantity, compatibility, urgency, capacity, and distance during matching.
-- Automatically allocate suitable volunteers after NGO acceptance.
-- Optimize delivery routes using real road-network information.
-- Track active deliveries using real-time GPS.
-- Detect route deviations during delivery.
-- Support demand forecasting for future planning.
-- Provide multilingual and conversational assistance.
-- Provide administrators with system monitoring and evaluation tools.
-
----
-
-## ✨ Key Features
-
-### 1. Donor Management
-
-Donors can:
-
-- Create food donation requests.
-- Enter food type and quantity.
-- Specify preparation/cooking time.
-- Select pickup location.
-- Upload food images.
-- View food safety/risk information.
-- Track donation status.
-- Track assigned volunteers.
-- Monitor delivery progress in real time.
-
----
-
-### 2. Food Risk Estimation
-
-FoodBridge evaluates donated food using software-based food-risk estimation.
-
-The system considers factors such as:
-
-- Food type
-- Quantity
-- Time since preparation
-- Safe consumption window
-- Available food information
-- Risk-related characteristics
-
-The result is presented as a food-risk score with supporting factors.
+- [Overview](#-overview)
+- [Problem Statement](#-problem-statement)
+- [Objectives](#-objectives)
+- [Proposed Solution](#-proposed-solution)
+- [Key Features](#-key-features)
+- [Complete System Workflow](#-complete-system-workflow)
+- [User Roles](#-user-roles)
+- [Donor Workflow](#-donor-workflow)
+- [NGO Workflow](#-ngo-workflow)
+- [Volunteer Workflow](#-volunteer-workflow)
+- [Administrator Workflow](#-administrator-workflow)
+- [AI and Machine Learning](#-ai-and-machine-learning)
+- [Food Risk Estimation](#-food-risk-estimation)
+- [Intelligent NGO Matching](#-intelligent-ngo-matching)
+- [Volunteer Allocation](#-volunteer-allocation)
+- [Route Optimization](#-route-optimization)
+- [Real-Time GPS Tracking](#-real-time-gps-tracking)
+- [Route Deviation Detection](#-route-deviation-detection)
+- [Real-Time Architecture](#-real-time-architecture)
+- [System Architecture](#-system-architecture)
+- [Technology Stack](#-technology-stack)
+- [Project Structure](#-project-structure)
+- [Database](#-database)
+- [Authentication and Security](#-authentication-and-security)
+- [API Architecture](#-api-architecture)
+- [Installation](#-installation)
+- [Environment Configuration](#-environment-configuration)
+- [Running the Application](#-running-the-application)
+- [Demo Accounts](#-demo-accounts)
+- [Testing](#-testing)
+- [Evaluation Results](#-evaluation-results)
+- [Evaluation Methodology](#-evaluation-methodology)
+- [Research Context](#-research-context)
+- [Limitations](#-limitations)
+- [Future Enhancements](#-future-enhancements)
+- [Deployment](#-deployment)
+- [Academic Significance](#-academic-significance)
+- [Authors](#-authors)
+- [License](#-license)
 
 ---
 
-### 3. Intelligent NGO Matching
+# 🌱 Overview
 
-Instead of automatically assigning a donation to an NGO, FoodBridge recommends the most suitable NGO.
+FoodBridge is an intelligent real-time food donation redistribution platform developed to reduce surplus food wastage and improve the efficiency of food redistribution.
 
-The matching process considers:
-
-- Geographic distance
-- Estimated travel time
-- NGO capacity
-- Food compatibility
-- Donation urgency
-- Food-risk/safe-window constraints
-- Matching model score
-- NGO feedback information
-
-The selected NGO receives a request and can verify the donation before accepting it.
-
-### NGO Workflow
+The platform connects:
 
 ```text
-Donation Created
-       ↓
-Suitable NGO Recommended
-       ↓
-NGO Request Sent
-       ↓
-NGO Verifies Donation
-       ↓
-   ┌───────────────┐
-   │               │
-Accept           Reject
-   │               │
-   ↓               ↓
-Volunteer       Next suitable
-Allocation       NGO Request
+DONOR
+  ↓
+FOODBRIDGE
+  ↓
+NGO
+  ↓
+VOLUNTEER
+  ↓
+DELIVERY
