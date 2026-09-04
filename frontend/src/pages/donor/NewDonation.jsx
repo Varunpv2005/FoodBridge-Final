@@ -1,10 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  APIProvider,
-  Map,
-  AdvancedMarker,
-} from '@vis.gl/react-google-maps'
+import { APIProvider, AdvancedMarker, Map, Pin } from '@vis.gl/react-google-maps'
 import { api } from '../../api/client'
 import { PageHeader, ErrorBanner } from '../../components/UI'
 import { UploadCloud, LocateFixed } from 'lucide-react'
@@ -14,33 +10,15 @@ const DEFAULT_LOCATION = {
   lng: 76.6552,
 }
 
-function GoogleLocationPicker({ position, setPosition }) {
-  const handleMapClick = (event) => {
-    if (!event.detail?.latLng) return
-
-    setPosition({
-      lat: event.detail.latLng.lat(),
-      lng: event.detail.latLng.lng(),
-    })
-  }
-
+function PickupMap({ position, setPosition }) {
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+  if (!apiKey) return <div className="flex h-full items-center justify-center bg-red-50 p-4 text-sm text-red-700">Google Maps could not be loaded. Configure VITE_GOOGLE_MAPS_API_KEY.</div>
   return (
-    <Map
-      defaultCenter={DEFAULT_LOCATION}
-      defaultZoom={15}
-      gestureHandling="greedy"
-      disableDefaultUI={false}
-      mapId="DEMO_MAP_ID"
-      onClick={handleMapClick}
-      style={{
-        width: '100%',
-        height: '100%',
-      }}
-    >
-      {position && (
-        <AdvancedMarker position={position} />
-      )}
-    </Map>
+    <APIProvider apiKey={apiKey}>
+      <Map defaultCenter={DEFAULT_LOCATION} defaultZoom={15} gestureHandling="greedy" mapId="foodbridge-pickup" onClick={(event) => event.detail.latLng && setPosition(event.detail.latLng.toJSON())} style={{ width: '100%', height: '100%' }}>
+        {position && <AdvancedMarker position={position}><Pin background="#16a34a" borderColor="#ffffff" glyphColor="#ffffff" glyph="P" /></AdvancedMarker>}
+      </Map>
+    </APIProvider>
   )
 }
 
@@ -48,10 +26,11 @@ export default function NewDonation() {
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
 
-  const [position, setPosition] = useState(DEFAULT_LOCATION)
+  const [position, setPosition] = useState(null)
 
   const [locationLoading, setLocationLoading] = useState(true)
   const [locationError, setLocationError] = useState('')
+  const [geocodeLoading, setGeocodeLoading] = useState(false)
 
   const [form, setForm] = useState({
     food_type: 'rice',
@@ -65,6 +44,10 @@ export default function NewDonation() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
+  const [riskEstimate, setRiskEstimate] = useState(null)
+  const [riskLoading, setRiskLoading] = useState(false)
+  const [riskError, setRiskError] = useState('')
+  const locationRequestRef = useRef(0)
 
   const navigate = useNavigate()
 
@@ -75,6 +58,29 @@ export default function NewDonation() {
     }))
   }
 
+  const resolvePickupAddress = async () => {
+    if (form.pickup_address.trim().length < 3) return
+    if (!window.google?.maps?.Geocoder) {
+      setLocationError('Google location search is still loading. Please try again.')
+      return
+    }
+    setGeocodeLoading(true)
+    setLocationError('')
+    try {
+      const geocoder = new window.google.maps.Geocoder()
+      const response = await geocoder.geocode({ address: form.pickup_address })
+      const result = response.results?.[0]
+      if (!result) throw new Error('Location could not be found.')
+      const location = result.geometry.location.toJSON()
+      setPosition(location)
+      update('pickup_address', result.formatted_address)
+    } catch (error) {
+      setLocationError(error.message)
+    } finally {
+      setGeocodeLoading(false)
+    }
+  }
+
   const onFile = (f) => {
     if (!f) return
 
@@ -82,7 +88,46 @@ export default function NewDonation() {
     setPreview(URL.createObjectURL(f))
   }
 
-  // Get device location
+  useEffect(() => {
+    const request = {
+      food_type: form.food_type,
+      hours_since_cooked: form.hours_since_cooked,
+      ambient_temp_c: form.ambient_temp_c,
+      has_cold_storage: form.has_cold_storage,
+      quantity_plates: form.quantity_plates,
+    }
+
+    if (!Number.isFinite(request.hours_since_cooked)
+      || !Number.isFinite(request.ambient_temp_c)
+      || !Number.isFinite(request.quantity_plates)
+      || request.quantity_plates < 1) {
+      setRiskEstimate(null)
+      setRiskError('Enter valid food details to estimate risk.')
+      return undefined
+    }
+
+    let active = true
+    setRiskLoading(true)
+    setRiskError('')
+    api.estimateRisk(request)
+      .then((estimate) => {
+        if (active) setRiskEstimate(estimate)
+      })
+      .catch((err) => {
+        if (active) {
+          setRiskEstimate(null)
+          setRiskError(err.message)
+        }
+      })
+      .finally(() => {
+        if (active) setRiskLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [form.food_type, form.hours_since_cooked, form.ambient_temp_c, form.has_cold_storage, form.quantity_plates])
+
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
       setLocationError(
@@ -92,26 +137,22 @@ export default function NewDonation() {
       return
     }
 
+    const requestId = locationRequestRef.current + 1
+    locationRequestRef.current = requestId
     setLocationLoading(true)
     setLocationError('')
 
     navigator.geolocation.getCurrentPosition(
       (location) => {
-        const lat = location.coords.latitude
-        const lng = location.coords.longitude
-
-        console.log('Device location:', lat, lng)
-
+        if (locationRequestRef.current !== requestId) return
         setPosition({
-          lat,
-          lng,
+          lat: location.coords.latitude,
+          lng: location.coords.longitude,
         })
-
         setLocationLoading(false)
       },
       (err) => {
-        console.error('Location error:', err)
-
+        if (locationRequestRef.current !== requestId) return
         if (err.code === 1) {
           setLocationError(
             'Location permission denied. Please allow location access in Chrome.'
@@ -134,15 +175,17 @@ export default function NewDonation() {
       },
       {
         enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0,
+        timeout: 8000,
+        maximumAge: 300000,
       }
     )
   }
 
-  // Automatically get location when page opens
   useEffect(() => {
     getCurrentLocation()
+    return () => {
+      locationRequestRef.current += 1
+    }
   }, [])
 
   const submit = async (e) => {
@@ -219,9 +262,6 @@ export default function NewDonation() {
   }
 
   return (
-    <APIProvider
-      apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
-    >
       <div>
         <PageHeader
           title="New Donation"
@@ -261,6 +301,15 @@ export default function NewDonation() {
               </p>
             )}
 
+            {result.match_explanation?.length > 0 && (
+              <div className="mt-3">
+                <p className="text-sm font-medium text-gray-800">Why this NGO?</p>
+                <ul className="list-disc pl-5 text-sm text-gray-600 mt-1">
+                  {result.match_explanation.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              </div>
+            )}
+
             {result.status !== 'rejected_quality' && (
               <p className="text-xs text-gray-400 mt-2">
                 Redirecting to your donations…
@@ -268,6 +317,30 @@ export default function NewDonation() {
             )}
           </div>
         )}
+
+        <div className="card mb-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="font-semibold text-gray-900">Estimated spoilage risk</p>
+              <p className="text-xs text-gray-500 mt-1">Decision support only, not laboratory food-safety certification.</p>
+            </div>
+            {riskLoading && <span className="text-sm text-gray-500">Estimating…</span>}
+          </div>
+
+          {riskError && <p className="text-sm text-red-700 mt-3">{riskError}</p>}
+          {riskEstimate && !riskLoading && (
+            <div className="mt-3 space-y-2">
+              <p className="text-lg font-semibold text-gray-900">
+                Risk: <span className={riskEstimate.risk_level === 'High' ? 'text-red-700' : riskEstimate.risk_level === 'Medium' ? 'text-yellow-700' : 'text-green-700'}>{riskEstimate.risk_level}</span>
+                <span className="text-sm font-normal text-gray-500"> · Score: {riskEstimate.risk_score}/100</span>
+              </p>
+              <ul className="list-disc pl-5 text-sm text-gray-600">
+                {riskEstimate.reasons.map((reason) => <li key={reason}>{reason}</li>)}
+              </ul>
+              <p className="text-sm text-gray-700"><span className="font-medium">Recommendation:</span> {riskEstimate.recommendation}</p>
+            </div>
+          )}
+        </div>
 
         <form
           onSubmit={submit}
@@ -442,8 +515,10 @@ export default function NewDonation() {
                     e.target.value
                   )
                 }
+                onBlur={resolvePickupAddress}
                 placeholder="e.g. Wedding Hall, JLB Road"
               />
+              {geocodeLoading && <p className="mt-1 text-xs text-gray-500">Resolving pickup location…</p>}
             </div>
 
             <button
@@ -456,7 +531,7 @@ export default function NewDonation() {
             </button>
           </div>
 
-          {/* GOOGLE MAP */}
+          {/* PICKUP MAP */}
           <div className="card">
 
             <div className="flex items-center justify-between mb-2">
@@ -468,7 +543,6 @@ export default function NewDonation() {
               <button
                 type="button"
                 onClick={getCurrentLocation}
-                disabled={locationLoading}
                 className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50"
               >
                 <LocateFixed size={16} />
@@ -495,7 +569,7 @@ export default function NewDonation() {
               className="rounded-xl overflow-hidden"
               style={{ height: '320px' }}
             >
-              <GoogleLocationPicker
+              <PickupMap
                 position={position}
                 setPosition={setPosition}
               />
@@ -508,17 +582,16 @@ export default function NewDonation() {
               </p>
 
               <p className="text-sm font-medium text-gray-700">
-                Latitude: {position.lat.toFixed(6)}
+                Latitude: {position ? position.lat.toFixed(6) : 'Location unavailable'}
               </p>
 
               <p className="text-sm font-medium text-gray-700">
-                Longitude: {position.lng.toFixed(6)}
+                Longitude: {position ? position.lng.toFixed(6) : 'Location unavailable'}
               </p>
             </div>
 
           </div>
         </form>
       </div>
-    </APIProvider>
   )
 }

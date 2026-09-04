@@ -1,5 +1,6 @@
 import os
 import uuid
+import time
 from datetime import datetime, timedelta
 from typing import List
 
@@ -8,14 +9,16 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.auth import require_role, get_current_user
-from app.models_db import User, Donation, DonationStatus, Feedback
+from app.models_db import User, Donation, DonationStatus, Feedback, DeliveryStop, Delivery
 from app.schemas_v2 import DonationOut, FeedbackCreate, FeedbackOut
 from app.services.quality import classify_image_bytes, predict_degradation
+from app.services.risk import estimate_risk
 from app.services.behavior import build_anomaly_features
 from app.services.anomaly import score_donor_pattern
-from app.services.assignment import assign_ngo
-from app.services.routing import assign_volunteer
 from app.services.ws_manager import manager
+from app.services.delivery_view import add_delivery_state
+from app.services.ngo_requests import create_request_queue
+from app.services.evaluation import ensure_experiment, sync_experiment
 
 router = APIRouter()
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "uploads")
@@ -33,9 +36,11 @@ async def create_donation(
     ambient_temp_c: float = Form(30.0),
     has_cold_storage: bool = Form(False),
     file: UploadFile = File(...),
+    evaluation_trial: bool = Form(False),
     db: Session = Depends(get_db),
     donor: User = Depends(require_role("donor")),
 ):
+    request_started = time.perf_counter()
     raw = await file.read()
     ext = os.path.splitext(file.filename or "photo.jpg")[1] or ".jpg"
     fname = f"{uuid.uuid4()}{ext}"
@@ -60,6 +65,15 @@ async def create_donation(
         db.commit()
         db.refresh(donation)
         return donation
+
+    risk = estimate_risk(
+        food_type, hours_since_cooked, ambient_temp_c, has_cold_storage,
+        freshness_score=quality["freshness_score"], quantity_plates=quantity_plates,
+    )
+    donation.risk_score = risk["risk_score"]
+    donation.risk_level = risk["risk_level"]
+    donation.risk_reasons = risk["reasons"]
+    donation.risk_recommendation = risk["recommendation"]
 
     # 2. Degradation timeline
     degradation = predict_degradation(
@@ -90,46 +104,36 @@ async def create_donation(
     # successfully-matched donation).
     db.add(donation)
     db.flush()
+    record = ensure_experiment(db, donation, controlled=evaluation_trial)
+    record.donation_creation_ms = round((time.perf_counter() - request_started) * 1000, 3)
 
     ngos = db.query(User).filter(User.role == "ngo").all()
-    match = assign_ngo(donation, ngos)
-    if not match:
-        donation.status = DonationStatus.pending_match
+    requests = create_request_queue(db, donation, ngos)
+    sync_experiment(db, donation)
+    if not requests:
         db.add(donation)
         db.commit()
         db.refresh(donation)
         return donation
 
-    ngo = db.query(User).filter(User.id == match["ngo_id"]).first()
-    donation.matched_ngo_id = ngo.id
-    donation.match_probability = match["probability"]
-    donation.match_shap = match["shap"]
-    donation.match_reason = match["reason"]
-    donation.status = DonationStatus.matched
-    ngo.ngo_capacity_available = max(0, ngo.ngo_capacity_available - quantity_plates)
-    db.add(ngo)
-
-    # 5. Volunteer assignment + multi-stop routing
-    try:
-        delivery = assign_volunteer(db, donation, ngo)
-        donation.status = DonationStatus.assigned_volunteer
-        db.add(donation)
-        db.commit()
-        db.refresh(donation)
-        await manager.broadcast("admin", {"type": "donation_assigned", "donation_id": donation.id,
-                                           "delivery_id": delivery.id})
-    except ValueError:
-        db.add(donation)
-        db.commit()
-        db.refresh(donation)
+    ngo = db.query(User).filter(User.id == requests[0].ngo_id).first()
+    db.commit()
+    db.refresh(donation)
+    event = {"type": "donation_request", "donation_id": donation.id,
+             "ngo_id": ngo.id, "status": donation.status.value,
+             "timestamp": datetime.utcnow().isoformat()}
+    await manager.broadcast(f"ngo:{ngo.id}", event)
+    await manager.broadcast(f"donor:{donation.donor_id}", event)
+    await manager.broadcast("admin", event)
 
     return donation
 
 
 @router.get("/donations", response_model=List[DonationOut])
 def list_my_donations(db: Session = Depends(get_db), donor: User = Depends(require_role("donor"))):
-    return (db.query(Donation).filter(Donation.donor_id == donor.id)
-            .order_by(Donation.created_at.desc()).all())
+    donations = (db.query(Donation).filter(Donation.donor_id == donor.id)
+                 .order_by(Donation.created_at.desc()).all())
+    return [add_delivery_state(db, donation) for donation in donations]
 
 
 @router.get("/donations/{donation_id}", response_model=DonationOut)
@@ -137,7 +141,21 @@ def get_donation(donation_id: str, db: Session = Depends(get_db), user: User = D
     donation = db.query(Donation).filter(Donation.id == donation_id).first()
     if not donation:
         raise HTTPException(404, "Donation not found.")
-    return donation
+    if user.role.value == "admin":
+        return add_delivery_state(db, donation)
+    if user.role.value == "donor" and donation.donor_id == user.id:
+        return add_delivery_state(db, donation)
+    if user.role.value == "ngo" and donation.matched_ngo_id == user.id:
+        return add_delivery_state(db, donation)
+    if user.role.value == "volunteer":
+        assigned = (db.query(DeliveryStop)
+                    .join(Delivery, Delivery.id == DeliveryStop.delivery_id)
+                    .filter(DeliveryStop.donation_id == donation.id,
+                            Delivery.volunteer_id == user.id)
+                    .first())
+        if assigned:
+            return add_delivery_state(db, donation)
+    raise HTTPException(403, "You are not authorized to view this donation.")
 
 
 

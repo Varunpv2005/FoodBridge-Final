@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models_db import User
 from app.schemas_v2 import RegisterRequest, LoginRequest, TokenResponse
-from app.auth import hash_password, verify_password, create_access_token, get_current_user
+from app.auth import hash_password, verify_password, create_access_token, get_current_user, new_session_id
 
 router = APIRouter()
 
@@ -42,7 +42,9 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
-    token = create_access_token({"sub": user.id, "role": user.role})
+    user.current_session_id = new_session_id()
+    db.commit()
+    token = create_access_token({"sub": user.id, "role": user.role.value}, user.current_session_id)
     return TokenResponse(access_token=token, user=_user_public(user))
 
 
@@ -51,7 +53,9 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == req.email).first()
     if not user or not verify_password(req.password, user.hashed_password):
         raise HTTPException(401, "Incorrect email or password.")
-    token = create_access_token({"sub": user.id, "role": user.role})
+    user.current_session_id = new_session_id()
+    db.commit()
+    token = create_access_token({"sub": user.id, "role": user.role.value}, user.current_session_id)
     return TokenResponse(access_token=token, user=_user_public(user))
 
 

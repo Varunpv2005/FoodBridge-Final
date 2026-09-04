@@ -44,3 +44,13 @@ docker-compose.override.yml
 
 # Local ML backups
 *corrupted_backup*.joblib
+
+# Local/runtime files
+backend/foodbridge.db
+backend/uploads/
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+

@@ -8,9 +8,15 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const handleUnauthorized = () => setUser(null)
+    window.addEventListener('foodbridge:unauthorized', handleUnauthorized)
     const token = localStorage.getItem('fb_token')
-    if (!token) { setLoading(false); return }
+    if (!token) {
+      setLoading(false)
+      return () => window.removeEventListener('foodbridge:unauthorized', handleUnauthorized)
+    }
     api.me().then(setUser).catch(() => localStorage.removeItem('fb_token')).finally(() => setLoading(false))
+    return () => window.removeEventListener('foodbridge:unauthorized', handleUnauthorized)
   }, [])
 
   const login = async (email, password) => {

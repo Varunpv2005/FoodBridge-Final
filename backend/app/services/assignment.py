@@ -15,12 +15,9 @@ from typing import List, Dict, Optional
 
 import pandas as pd
 
-from app.services.geo import haversine_km, AVG_SPEED_KMPH
+from app.services.geo import road_metrics
+from app.services.demand_forecasting import get_aggregate_demand_signal
 from app.utils.model_loader import load_matching
-
-
-def _travel_hours(distance_km: float) -> float:
-    return distance_km / AVG_SPEED_KMPH
 
 
 def score_ngo_candidate(donation_features: dict, ngo, distance_km: float) -> dict:
@@ -67,14 +64,14 @@ def score_ngo_candidate(donation_features: dict, ngo, distance_km: float) -> dic
     return {"probability": proba, "shap": top_shap}
 
 
-def assign_ngo(donation, candidate_ngos: List, safety_margin: float = 0.7) -> Optional[dict]:
+def rank_ngo_candidates(donation, candidate_ngos: List, safety_margin: float = 0.7) -> List[dict]:
     """
     donation: object with .pickup_lat/.pickup_lng/.quantity_plates/
               .quality_confidence/.degradation_hours
     candidate_ngos: list of User rows with role == ngo
 
-    Returns the winning NGO's id + full explanation, or None if no NGO is
-    feasible (all either lack capacity or are unreachable before spoilage).
+    Returns all suitable NGO candidates, best first. The caller decides when
+    a candidate becomes accepted; matching alone never finalizes an NGO.
     """
     donation_features = {
         "quantity_plates": donation.quantity_plates,
@@ -84,12 +81,18 @@ def assign_ngo(donation, candidate_ngos: List, safety_margin: float = 0.7) -> Op
     }
 
     scored = []
+    demand_signal = get_aggregate_demand_signal()
+    risk_score = getattr(donation, "risk_score", None)
+    risk_urgency = max(0.0, min(1.0, float(risk_score) / 100)) if risk_score is not None else 0.0
     for ngo in candidate_ngos:
         if ngo.ngo_capacity_available < donation.quantity_plates:
             continue  # hard constraint: must physically fit the donation
 
-        distance_km = haversine_km(donation.pickup_lat, donation.pickup_lng, ngo.lat, ngo.lng)
-        travel_hrs = _travel_hours(distance_km)
+        metrics = road_metrics((donation.pickup_lat, donation.pickup_lng), (ngo.lat, ngo.lng))
+        if metrics["duration_minutes"] is None:
+            continue
+        distance_km = metrics["distance_km"]
+        travel_hrs = metrics["duration_minutes"] / 60.0
 
         feasible = True
         if donation.degradation_hours is not None:
@@ -101,17 +104,40 @@ def assign_ngo(donation, candidate_ngos: List, safety_margin: float = 0.7) -> Op
             "ngo_name": ngo.name,
             "distance_km": round(distance_km, 2),
             "travel_hours": round(travel_hrs, 2),
+            "travel_source": metrics["source"],
             "feasible": feasible,
             "probability": result["probability"],
             "shap": result["shap"],
+            "capacity_available_plates": ngo.ngo_capacity_available,
+            "sentiment_score": ngo.ngo_sentiment_score,
         })
 
     feasible_candidates = [c for c in scored if c["feasible"]]
     pool = feasible_candidates if feasible_candidates else scored
     if not pool:
-        return None
+        return []
 
-    best = max(pool, key=lambda c: (c["probability"], -c["distance_km"]))
+    max_distance = max((candidate["distance_km"] for candidate in pool), default=0.0)
+    demand_pressure = 0.0
+    if demand_signal:
+        # Aggregate demand is context only; it is not a destination preference.
+        demand_pressure = max(0.0, min(1.0, demand_signal["pressure_ratio"] - 0.5))
+
+    for candidate in pool:
+        proximity = 1.0 if max_distance == 0 else 1 - candidate["distance_km"] / max_distance
+        candidate["factors"] = {
+            "distance": round(proximity, 4),
+            "capacity": round(min(1.0, candidate["capacity_available_plates"] / max(donation.quantity_plates, 1)), 4),
+            "compatibility": 0.85,
+            "feedback": round(float(candidate["sentiment_score"]), 4),
+            "demand": round(demand_pressure, 4),
+            "risk_urgency": round(risk_urgency, 4),
+        }
+        candidate["risk_adjustment"] = round(0.05 * risk_urgency * proximity, 6)
+        candidate["demand_adjustment"] = round(0.02 * demand_pressure, 6)
+        candidate["final_score"] = candidate["probability"] + candidate["risk_adjustment"] + candidate["demand_adjustment"]
+
+    pool.sort(key=lambda c: (-c["final_score"], -c["probability"], c["distance_km"]))
 
     readable = {
         "distance_km": "proximity to donor", "capacity_available_plates": "available capacity",
@@ -120,10 +146,33 @@ def assign_ngo(donation, candidate_ngos: List, safety_margin: float = 0.7) -> Op
         "has_cold_storage": "cold storage availability", "ngo_tier_encoded": "NGO tier",
         "occupancy_%": "current occupancy", "hour_of_day": "time of day",
     }
-    pos = [readable.get(f, f) for f, v in best["shap"].items() if v > 0][:3]
-    reason = (f"Selected {best['ngo_name']} ({best['probability']*100:.1f}% match confidence, "
-              f"{best['distance_km']} km away). Favored by: {', '.join(pos) or 'baseline fit'}.")
-    if not best["feasible"]:
-        reason += " Warning: this is the least-bad option — no NGO was reachable within the food's safe window."
+    for candidate in pool:
+        pos = [readable.get(f, f) for f, v in candidate["shap"].items() if v > 0][:3]
+        explanation = [
+            "Food compatibility was included in the existing matcher.",
+            f"NGO has sufficient capacity ({candidate['capacity_available_plates']} plates available).",
+            f"Pickup distance is {candidate['distance_km']} km.",
+            f"Historical NGO feedback signal: {candidate['sentiment_score']:.2f}.",
+        ]
+        if demand_signal:
+            explanation.append(
+                f"Aggregate forecast demand is {demand_signal['predicted_plates']:.1f} plates "
+                "relative to historical average; no NGO-specific demand was assumed."
+            )
+        if risk_score is not None:
+            explanation.append(f"Food urgency was considered using the estimated risk score ({float(risk_score):.0f}/100).")
+        candidate["explanation"] = explanation
+        candidate["reason"] = (f"Selected {candidate['ngo_name']} ({candidate['probability']*100:.1f}% base match confidence, "
+                                f"enhanced score {candidate['final_score']*100:.1f}, {candidate['distance_km']} km away). "
+                                f"Favored by: {', '.join(pos) or 'baseline fit'}. "
+                                f"Why this NGO: {' '.join(explanation)}")
+        if not candidate["feasible"]:
+            candidate["reason"] += " Warning: this is the least-bad option — no NGO was reachable within the food's safe window."
 
-    return {**best, "all_candidates": scored, "reason": reason}
+    return pool
+
+
+def assign_ngo(donation, candidate_ngos: List, safety_margin: float = 0.7) -> Optional[dict]:
+    """Backward-compatible helper returning the highest-ranked candidate."""
+    ranked = rank_ngo_candidates(donation, candidate_ngos, safety_margin)
+    return ranked[0] if ranked else None

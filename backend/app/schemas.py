@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import List, Optional
 
 
 class SentimentRequest(BaseModel):
@@ -87,3 +87,50 @@ class ImageQualityResponse(BaseModel):
     label: str
     confidence: float
     recommendation: str
+
+
+class AssistantRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=2000)
+    language: str = Field("en", pattern="^(en|hi|kn)$")
+
+
+class AssistantResponse(BaseModel):
+    language: str
+    intent: str
+    reply: str
+
+
+class DemandForecastPoint(BaseModel):
+    forecast_date: str
+    predicted_demand: float
+    xgboost_prediction: float
+    lstm_prediction: float
+
+
+class DemandForecastResponse(BaseModel):
+    region: str
+    food_type: str
+    model_weights: dict
+    forecasts: List[DemandForecastPoint]
+    metrics: dict
+    data_source: str
+    sequence_length: int
+
+
+class RiskEstimationRequest(BaseModel):
+    food_type: str = Field(..., pattern="^(rice|curry|bread|dairy|snacks|mixed)$", example="rice")
+    hours_since_cooked: float = Field(..., ge=0, le=48, example=2.0)
+    ambient_temp_c: float = Field(..., ge=-10, le=50, example=30.0)
+    has_cold_storage: bool = Field(False, example=False)
+    freshness_score: Optional[float] = Field(None, ge=0, le=1, example=0.75)
+    quantity_plates: int = Field(30, ge=1, le=1000, example=30)
+
+
+class RiskEstimationResponse(BaseModel):
+    risk_score: int = Field(..., ge=0, le=100, example=45)
+    risk_level: str = Field(..., pattern="^(Low|Medium|High)$", example="Medium")
+    reasons: List[str] = Field(..., example=["Cooked 2-4 hours ago", "Warm temperature (30 C)"])
+    recommendation: str
+    hours_remaining: Optional[float] = None
+    spoil_by: Optional[str] = None
+    urgency: Optional[str] = None

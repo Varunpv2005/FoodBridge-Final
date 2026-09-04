@@ -31,6 +31,7 @@ class DonationStatus(str, enum.Enum):
     rejected_quality = "rejected_quality"
     pending_match = "pending_match"
     matched = "matched"
+    ngo_accepted = "ngo_accepted"
     assigned_volunteer = "assigned_volunteer"
     picked_up = "picked_up"
     delivered = "delivered"
@@ -50,6 +51,7 @@ class User(Base):
     id = Column(String, primary_key=True, default=gen_id)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    current_session_id = Column(String, nullable=True, index=True)
     role = Column(Enum(Role), nullable=False)
     name = Column(String, nullable=False)
     phone = Column(String, default="")
@@ -99,6 +101,46 @@ class Donation(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class NGORequest(Base):
+    __tablename__ = "ngo_requests"
+    id = Column(String, primary_key=True, default=gen_id)
+    donation_id = Column(String, ForeignKey("donations.id"), nullable=False, index=True)
+    ngo_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    rank = Column(Integer, nullable=False)
+    status = Column(String, nullable=False, default="queued")  # queued/pending/accepted/rejected
+    probability = Column(Float, nullable=True)
+    distance_km = Column(Float, nullable=True)
+    reason = Column(Text, nullable=True)
+    requested_at = Column(DateTime, nullable=True)
+    decided_at = Column(DateTime, nullable=True)
+
+
+class ExperimentRecord(Base):
+    __tablename__ = "experiment_records"
+    id = Column(String, primary_key=True, default=gen_id)
+    donation_id = Column(String, ForeignKey("donations.id"), unique=True, nullable=True, index=True)
+    started_at = Column(DateTime, nullable=False)
+    ended_at = Column(DateTime, nullable=True)
+    ngo_request_count = Column(Integer, default=0)
+    ngo_rejection_count = Column(Integer, default=0)
+    fallback_count = Column(Integer, default=0)
+    accepted_ngo_id = Column(String, nullable=True)
+    volunteer_id = Column(String, nullable=True)
+    assignment_at = Column(DateTime, nullable=True)
+    assignment_processing_ms = Column(Float, nullable=True)
+    route_distance_km = Column(Float, nullable=True)
+    route_duration_minutes = Column(Float, nullable=True)
+    gps_update_count = Column(Integer, default=0)
+    realtime_measurements_ms = Column(JSON, nullable=True)
+    arrival_at = Column(DateTime, nullable=True)
+    completion_at = Column(DateTime, nullable=True)
+    donation_creation_ms = Column(Float, nullable=True)
+    outcome = Column(String, nullable=True)
+    experiment_type = Column(String, nullable=False, default="foodbridge")
+    is_controlled_trial = Column(Boolean, nullable=False, default=False)
+    trial_id = Column(String, nullable=True, unique=True)
+
+
 class Delivery(Base):
     __tablename__ = "deliveries"
     id = Column(String, primary_key=True, default=gen_id)
@@ -106,6 +148,13 @@ class Delivery(Base):
     status = Column(Enum(DeliveryStatus), default=DeliveryStatus.planned)
     route_geojson = Column(JSON, nullable=True)   # ordered [[lat,lng], ...] polyline
     total_distance_km = Column(Float, default=0.0)
+    estimated_travel_minutes = Column(Float, nullable=True)
+    urgent_stop_count = Column(Integer, default=0)
+    expected_late_stop_count = Column(Integer, default=0)
+    route_error = Column(Text, nullable=True)
+    route_deviated = Column(Boolean, default=False)
+    route_deviation_at = Column(DateTime, nullable=True)
+    route_recalculated_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
 

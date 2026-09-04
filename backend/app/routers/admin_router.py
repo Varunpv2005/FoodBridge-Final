@@ -5,11 +5,49 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.auth import require_role
 from app.models_db import User, Donation, Delivery, DonationStatus
-from app.schemas_v2 import DonationOut, DeliveryOut
+from app.schemas_v2 import BaselineExperimentCreate, DonationOut, DeliveryOut
+from app.models_db import ExperimentRecord
 from app.services.assignment import assign_ngo
-from app.services.routing import assign_volunteer
+from app.services.routing import assign_volunteer, refresh_delivery_route
+from app.services.delivery_view import add_latest_location
+from app.services.evaluation import ensure_experiment, results_snapshot, sync_experiment
 
 router = APIRouter()
+
+
+@router.get("/results")
+def results(db: Session = Depends(get_db), admin: User = Depends(require_role("admin"))):
+    for donation in db.query(Donation).all():
+        sync_experiment(db, donation)
+    db.commit()
+    return results_snapshot(db)
+
+
+@router.post("/results/baseline")
+def record_baseline(payload: BaselineExperimentCreate, db: Session = Depends(get_db), admin: User = Depends(require_role("admin"))):
+    record = ExperimentRecord(
+        started_at=payload.started_at,
+        ended_at=payload.ended_at,
+        ngo_request_count=payload.ngo_request_count,
+        fallback_count=payload.fallback_count,
+        route_distance_km=payload.route_distance_km,
+        route_duration_minutes=payload.route_duration_minutes,
+        outcome="successful" if payload.successful else "incomplete",
+        experiment_type="baseline",
+    )
+    db.add(record)
+    db.commit()
+    return {"id": record.id, "experiment_type": record.experiment_type, "outcome": record.outcome}
+
+
+@router.post("/results/trials/{donation_id}")
+def mark_controlled_trial(donation_id: str, db: Session = Depends(get_db), admin: User = Depends(require_role("admin"))):
+    donation = db.query(Donation).filter(Donation.id == donation_id).first()
+    if not donation:
+        raise HTTPException(404, "Donation not found.")
+    record = ensure_experiment(db, donation, controlled=True)
+    db.commit()
+    return {"trial_id": record.trial_id, "donation_id": donation.id, "message": "Existing observed workflow explicitly marked as a controlled trial."}
 
 
 @router.get("/overview")
@@ -44,7 +82,12 @@ def all_donations(db: Session = Depends(get_db), admin: User = Depends(require_r
 
 @router.get("/deliveries", response_model=List[DeliveryOut])
 def all_deliveries(db: Session = Depends(get_db), admin: User = Depends(require_role("admin"))):
-    return db.query(Delivery).order_by(Delivery.created_at.desc()).all()
+    deliveries = db.query(Delivery).order_by(Delivery.created_at.desc()).all()
+    for delivery in deliveries:
+        refresh_delivery_route(db, delivery)
+        add_latest_location(db, delivery)
+    db.commit()
+    return deliveries
 
 
 @router.get("/users")

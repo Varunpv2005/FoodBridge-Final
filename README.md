@@ -42,13 +42,12 @@ foodbridge/
 │       │   ├── geo.py                # haversine + nearest-neighbour/2-opt VRP heuristic
 │       │   ├── anomaly.py           # Isolation Forest + live SHAP explainer
 │       │   ├── behavior.py          # builds donor behavioural features from DB history
-│       │   ├── simulate.py          # simulated real-time volunteer GPS movement
 │       │   └── ws_manager.py        # WebSocket pub/sub for live tracking
 │       └── routers/                 # auth, donor, ngo, volunteer, admin, feedback, ws, + standalone ML
 ├── frontend/
 │   └── src/
 │       ├── pages/donor|ngo|volunteer|admin/   # 4 role dashboards
-│       ├── components/MapView.jsx   # shared Leaflet map (OpenStreetMap, no API key)
+│       ├── components/MapView.jsx   # shared Google Maps renderer
 │       ├── hooks/useTrackingSocket.js
 │       └── context/AuthContext.jsx
 ├── docker-compose.yml
@@ -83,10 +82,10 @@ Frontend: http://localhost:3000 · Backend: http://localhost:8000/docs
    spot on the map, submit. Watch the response: quality label → predicted
    safe-hours window → matched NGO with a plain-English reason → assigned
    volunteer, all in one request (~1–2s).
-2. **Log in as volunteer1** (open a second browser/incognito tab). See the
-   assigned delivery with its stop order and ETAs. Click "Start delivery" —
-   this launches a simulated real-time GPS feed (or wire a phone to
-   `POST /api/volunteer/location` for real GPS in production).
+2. **Log in as volunteer1** on a device with location access. See the assigned
+   delivery with its stop order and ETAs. Click "Start delivery" — this starts
+   real browser GPS tracking through the authenticated WebSocket. Allow
+   location access when prompted.
 3. **Log in as ngo1.** Watch the donation arrive in "Incoming Donations,"
    confirm receipt once delivered, leave a star rating + comment on the
    donor — this updates the donor's trust score and feeds the sentiment
@@ -154,10 +153,10 @@ real-world generalization claims.
    *guidance* (USDA 2-hour rule, Bacillus cereus risk for rice dishes),
    not lab-measured spoilage sensors — defensible as a guideline-informed
    proxy, but real TVB-N/gas-sensor data would be stronger for production.
-4. **Simulated GPS**: volunteer movement during a delivery is simulated
-   (straight-line interpolation at ~25 km/h) unless a real phone posts to
-   `POST /api/volunteer/location` — the rest of the system (DB writes,
-   WebSocket broadcast, ETA logic) is identical either way.
+4. **Physical GPS requirement**: live volunteer tracking requires a browser or
+   phone that provides real geolocation permission. The backend validates and
+   persists each delivery-specific location update before broadcasting it to
+   authorized clients.
 5. **VRP heuristic, not an exact solver**: nearest-neighbour + 2-opt is a
    standard, citable approximation for small stop counts, not a globally
    optimal solution — fine for a handful of stops per vehicle, would need
@@ -189,8 +188,29 @@ backbone.classifier[1] = torch.nn.Linear(backbone.last_channel, 2)
   guards (`require_role` in `backend/app/auth.py`).
 - Database: SQLite by default (zero-config), swap via `DATABASE_URL` env
   var to Postgres with no code changes (plain SQLAlchemy).
-- Maps: Leaflet + OpenStreetMap tiles — no API key needed, works out of
-  the box.
+- Maps: Google Maps JavaScript API in the browser and Google Routes API on the
+   server. Configure `GOOGLE_MAPS_API_KEY` as a browser-referrer-restricted
+   key and, for server requests using the same existing key, set
+   `GOOGLE_MAPS_HTTP_REFERRER` to an allowed application origin.
+   The frontend Vite config reuses `GOOGLE_MAPS_API_KEY` from
+   `backend/.env` for local development; Docker receives it as a build arg.
 - Real-time: native WebSockets (`/ws/track/{channel}`) — one channel per
   delivery for donor/NGO viewers, plus a global `admin` channel for the
   live ops map.
+
+### Google Maps setup
+
+Enable Maps JavaScript API, Places API, and Routes API in Google Cloud. The
+browser key must be restricted to the application's allowed HTTP referrers.
+The backend can use the existing key when its allowed HTTP referrer is sent;
+for production, a separate server-authorized key is recommended but is not
+required by this implementation. Run Docker with the backend environment file
+available for interpolation:
+
+```bash
+docker compose --env-file backend/.env up --build
+```
+
+The existing real GPS and WebSocket flow is preserved: device location posts
+to `/api/volunteer/location`, and authorized viewers receive updates through
+`/ws/track/{channel}`.

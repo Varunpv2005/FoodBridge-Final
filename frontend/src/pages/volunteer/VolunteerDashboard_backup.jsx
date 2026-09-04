@@ -7,7 +7,7 @@ import { Navigation, CheckCircle2, PlayCircle } from 'lucide-react'
 
 function DeliveryCard({ delivery, onChanged }) {
   const [expanded, setExpanded] = useState(false)
-  const liveMsg = useTrackingSocket(expanded ? delivery.id : null)
+  const { lastMessage: liveMsg } = useTrackingSocket(expanded ? delivery.id : null)
   const [liveVolunteerPos, setLiveVolunteerPos] = useState(null)
 
   useEffect(() => {

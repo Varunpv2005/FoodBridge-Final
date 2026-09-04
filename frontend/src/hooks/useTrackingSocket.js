@@ -3,29 +3,60 @@ import { wsUrl } from '../api/client'
 
 export function useTrackingSocket(channel) {
   const [lastMessage, setLastMessage] = useState(null)
+  const [connected, setConnected] = useState(false)
   const wsRef = useRef(null)
+  const pendingMessageRef = useRef(null)
 
   useEffect(() => {
     if (!channel) return undefined
-    let closed = false
-    let ws
+    let stopped = false
+    let reconnectTimer
 
-    try {
-      ws = new WebSocket(wsUrl(channel))
+    const connect = () => {
+      if (stopped) return
+      if (wsRef.current && (wsRef.current.readyState === WebSocket.CONNECTING || wsRef.current.readyState === WebSocket.OPEN)) return
+      const ws = new WebSocket(wsUrl(channel))
       wsRef.current = ws
-      ws.onmessage = (evt) => {
-        try { setLastMessage(JSON.parse(evt.data)) } catch { /* ignore */ }
+      ws.onopen = () => {
+        setConnected(true)
+        if (pendingMessageRef.current) {
+          ws.send(JSON.stringify(pendingMessageRef.current))
+          pendingMessageRef.current = null
+        }
       }
-      ws.onerror = () => {}
-    } catch {
-      /* WebSocket unsupported / connection refused -- dashboard still works without live push */
+      ws.onmessage = (evt) => {
+        try { setLastMessage(JSON.parse(evt.data)) } catch { /* ignore malformed events */ }
+      }
+      ws.onclose = () => {
+        setConnected(false)
+        if (wsRef.current === ws && ws.code === 1008) {
+          window.dispatchEvent(new Event('foodbridge:unauthorized'))
+          return
+        }
+        if (!stopped) reconnectTimer = setTimeout(connect, 1000)
+      }
     }
 
+    connect()
+
     return () => {
-      closed = true
-      if (ws && ws.readyState === WebSocket.OPEN) ws.close()
+      stopped = true
+      clearTimeout(reconnectTimer)
+      if (wsRef.current && wsRef.current.readyState < WebSocket.CLOSING) wsRef.current.close()
+      wsRef.current = null
+      setConnected(false)
+      pendingMessageRef.current = null
     }
   }, [channel])
 
-  return lastMessage
+  const send = (message) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(message))
+      return true
+    }
+    if (message?.type !== 'location_update') pendingMessageRef.current = message
+    return false
+  }
+
+  return { lastMessage, send, connected }
 }

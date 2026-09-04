@@ -1,27 +1,18 @@
-"""
-Google Maps road-routing utilities.
-
-Uses Google Routes API to calculate:
-- actual road route
-- road distance
-- ETA
-- optimized waypoint order
-- road-following polyline
-
-Falls back to the existing Haversine + nearest-neighbour route
-if Google Routes API is unavailable.
-"""
+"""Google Maps road-routing utilities."""
 
 import math
+import logging
 import os
 import requests
+import time
+from pathlib import Path
 from typing import List, Tuple
 from dotenv import load_dotenv
 
-load_dotenv()
-
-
-AVG_SPEED_KMPH = 25.0
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+logger = logging.getLogger(__name__)
+_route_cache = {}
+_ROUTE_CACHE_SECONDS = 300
 
 
 def haversine_km(lat1, lng1, lat2, lng2) -> float:
@@ -53,28 +44,44 @@ def route_length_km(points: List[Tuple[float, float]]) -> float:
     )
 
 
-def _google_waypoint(lat, lng):
-    return {
-        "location": {
-            "latLng": {
-                "latitude": lat,
-                "longitude": lng,
-            }
-        }
-    }
+def road_metrics(start: Tuple[float, float], end: Tuple[float, float]) -> dict:
+    """Return Google road distance/duration or an explicit unavailable state."""
+    try:
+        result = _google_routes_route(start, [{"id": "destination", "lat": end[0], "lng": end[1]}])
+        minutes = result["legs"][0]["eta_minutes"] if result["legs"] else None
+        return {"distance_km": result["total_distance_km"], "duration_minutes": minutes, "source": "google"}
+    except Exception:
+        return {"distance_km": None, "duration_minutes": None, "source": "unavailable"}
 
 
-def _google_route(start, stops):
-    """
-    Calculate an actual driving route using Google Routes API.
-    """
+def _decode_polyline(encoded):
+    points = []
+    index = latitude = longitude = 0
+    while index < len(encoded):
+        result = shift = 0
+        while True:
+            byte = ord(encoded[index]) - 63
+            index += 1
+            result |= (byte & 0x1f) << shift
+            shift += 5
+            if byte < 0x20:
+                break
+        latitude += ~(result >> 1) if result & 1 else result >> 1
+        result = shift = 0
+        while True:
+            byte = ord(encoded[index]) - 63
+            index += 1
+            result |= (byte & 0x1f) << shift
+            shift += 5
+            if byte < 0x20:
+                break
+        longitude += ~(result >> 1) if result & 1 else result >> 1
+        points.append([latitude / 1e5, longitude / 1e5])
+    return points
 
-    api_key = os.getenv("GOOGLE_ROUTES_API_KEY")
 
-    if not api_key:
-        raise RuntimeError(
-            "GOOGLE_ROUTES_API_KEY is not configured."
-        )
+def _google_routes_route(start, stops):
+    """Return road geometry and metrics for the supplied stop order."""
 
     if not stops:
         return {
@@ -84,327 +91,59 @@ def _google_route(start, stops):
             "polyline": [],
         }
 
-    url = (
-        "https://routes.googleapis.com/"
-        "directions/v2:computeRoutes"
-    )
-
-    origin = _google_waypoint(
-        start[0],
-        start[1],
-    )
-
-    # Google Routes API requires a destination.
-    # We use the last supplied stop as destination.
-    destination = _google_waypoint(
-        stops[-1]["lat"],
-        stops[-1]["lng"],
-    )
-
-    intermediates = [
-        _google_waypoint(
-            stop["lat"],
-            stop["lng"],
-        )
-        for stop in stops[:-1]
-    ]
-
-    body = {
-        "origin": origin,
-        "destination": destination,
-        "intermediates": intermediates,
+    api_key = os.getenv("GOOGLE_MAPS_SERVER_API_KEY") or os.getenv("GOOGLE_MAPS_API_KEY")
+    if not api_key:
+        raise RuntimeError("Google Maps key is not configured")
+    location = lambda point: {"location": {"latLng": {"latitude": point["lat"], "longitude": point["lng"]}}}
+    payload = {
+        "origin": {"location": {"latLng": {"latitude": start[0], "longitude": start[1]}}},
+        "destination": location(stops[-1]),
+        "intermediates": [location(stop) for stop in stops[:-1]],
         "travelMode": "DRIVE",
         "routingPreference": "TRAFFIC_AWARE",
         "polylineQuality": "HIGH_QUALITY",
-        "polylineEncoding": "GEO_JSON_LINESTRING",
-        "optimizeWaypointOrder": True,
+        "polylineEncoding": "ENCODED_POLYLINE",
     }
-
-    headers = {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": api_key,
-        "X-Goog-FieldMask": (
-            "routes.distanceMeters,"
-            "routes.duration,"
-            "routes.polyline.geoJsonLinestring,"
-            "routes.optimizedIntermediateWaypointIndex"
-        ),
-    }
-
+    cache_key = (round(start[0], 5), round(start[1], 5), tuple((round(stop["lat"], 5), round(stop["lng"], 5)) for stop in stops))
+    cached = _route_cache.get(cache_key)
+    if cached and time.monotonic() - cached["created"] < _ROUTE_CACHE_SECONDS:
+        return cached["result"]
     response = requests.post(
-        url,
-        json=body,
-        headers=headers,
+        "https://routes.googleapis.com/directions/v2:computeRoutes",
+        headers={"Content-Type": "application/json", "X-Goog-Api-Key": api_key, "Referer": os.getenv("GOOGLE_MAPS_HTTP_REFERRER", "http://localhost:5173/"), "X-Goog-FieldMask": "routes.distanceMeters,routes.duration,routes.legs.distanceMeters,routes.legs.duration,routes.polyline.encodedPolyline"},
+        json=payload,
         timeout=20,
     )
-
     if not response.ok:
-        raise RuntimeError(
-            f"Google Routes API error "
-            f"{response.status_code}: {response.text}"
-        )
-
+        detail = response.text[:300].replace("\n", " ")
+        logger.error("Google Routes provider error: status=%s detail=%s", response.status_code, detail)
+        raise RuntimeError(f"Google Routes HTTP {response.status_code}: {detail}")
     data = response.json()
-
-    routes = data.get("routes", [])
-
-    if not routes:
-        raise RuntimeError(
-            "Google Routes API returned no routes."
-        )
-
-    route = routes[0]
-
-    distance_meters = route.get(
-        "distanceMeters",
-        0,
-    )
-
-    duration_string = route.get(
-        "duration",
-        "0s",
-    )
-
-    duration_seconds = float(
-        duration_string.rstrip("s")
-    )
-
-    optimized_indexes = route.get(
-        "optimizedIntermediateWaypointIndex",
-        [],
-    )
-
-    print("GOOGLE OPTIMIZED INDEXES:", optimized_indexes)
-
-    # Original stop ordering:
-    # intermediates + destination
-    #
-    # Example:
-    # stops = [A, B, C]
-    #
-    # Google optimizes intermediates [A, B]
-    # and destination C remains the final point.
-    # Google returns indexes only for intermediate waypoints.
-# Ignore invalid indexes such as -1.
-        # Google returns indexes only for intermediate waypoints.
-    # Ignore invalid indexes such as -1.
-    valid_indexes = [
-        i
-        for i in optimized_indexes
-        if 0 <= i < len(stops) - 1
-    ]
-
-    if valid_indexes:
-        ordered_stops = [
-            stops[i]
-            for i in valid_indexes
-        ]
-
-        # Destination remains the final stop.
-        ordered_stops.append(stops[-1])
-
-    else:
-        # If Google does not provide a usable optimization,
-        # preserve the original stop order.
-        ordered_stops = stops
-
-    order = [
-        stop["id"]
-        for stop in ordered_stops
-    ]
-
+    if not data.get("routes"):
+        raise RuntimeError("Google Routes returned no route")
+    route = data["routes"][0]
+    cumulative_minutes = 0.0
     legs = []
-
-    # Google gives overall route duration/distance.
-    # For individual stop ETA we calculate cumulative
-    # distance between the ordered stops using the
-    # road route's overall duration proportionally.
-    #
-    # The actual route itself comes from Google.
-    cumulative_distance = 0.0
-
-    points = [
-        (start[0], start[1])
-    ] + [
-        (
-            stop["lat"],
-            stop["lng"],
-        )
-        for stop in ordered_stops
-    ]
-
-    segment_distances = []
-
-    for i in range(len(points) - 1):
-        segment = haversine_km(
-            *points[i],
-            *points[i + 1],
-        )
-
-        segment_distances.append(segment)
-        cumulative_distance += segment
-
-    total_google_km = distance_meters / 1000.0
-
-    cumulative_haversine = 0.0
-    cumulative_eta = 0.0
-
-    for i, stop in enumerate(ordered_stops):
-
-        cumulative_haversine += segment_distances[i]
-
-        if cumulative_distance > 0:
-            fraction = (
-                cumulative_haversine
-                / cumulative_distance
-            )
-        else:
-            fraction = 0
-
-        cumulative_eta = (
-            duration_seconds
-            * fraction
-            / 60.0
-        )
-
+    for stop, leg in zip(stops, route.get("legs", [])):
+        duration_seconds = float(str(leg.get("duration", "0s")).rstrip("s"))
+        cumulative_minutes += duration_seconds / 60.0
         legs.append({
             "stop_id": stop["id"],
-            "distance_km": round(
-                segment_distances[i],
-                3,
-            ),
-            "eta_minutes": round(
-                cumulative_eta,
-                1,
-            ),
+            "distance_km": round(leg.get("distanceMeters", 0.0) / 1000.0, 3),
+            "eta_minutes": round(cumulative_minutes, 1),
         })
-
-    # GeoJSON coordinates returned by Google
-    # are [longitude, latitude].
-    geojson = (
-        route
-        .get("polyline", {})
-        .get("geoJsonLinestring", {})
-    )
-
-    coordinates = geojson.get(
-        "coordinates",
-        [],
-    )
-
-    # MapView expects [latitude, longitude].
-    polyline = [
-        [coord[1], coord[0]]
-        for coord in coordinates
-        if len(coord) >= 2
-    ]
-
-    return {
-        "order": order,
-        "total_distance_km": round(
-            total_google_km,
-            3,
-        ),
+    encoded = route.get("polyline", {}).get("encodedPolyline", "")
+    polyline = _decode_polyline(encoded)
+    if len(polyline) < 2:
+        raise RuntimeError("Google Routes returned no usable route geometry")
+    result = {
+        "order": [stop["id"] for stop in stops],
+        "total_distance_km": round(route.get("distanceMeters", 0.0) / 1000.0, 3),
         "legs": legs,
         "polyline": polyline,
     }
-
-
-def _fallback_route(start, stops):
-    """
-    Fallback route if Google API cannot be reached.
-    """
-
-    if not stops:
-        return {
-            "order": [],
-            "total_distance_km": 0.0,
-            "legs": [],
-            "polyline": [],
-        }
-
-    remaining = stops[:]
-
-    route_ids = []
-
-    route_points = [start]
-
-    current = start
-
-    while remaining:
-
-        nxt = min(
-            remaining,
-            key=lambda s: haversine_km(
-                *current,
-                s["lat"],
-                s["lng"],
-            ),
-        )
-
-        route_ids.append(nxt["id"])
-
-        route_points.append(
-            (
-                nxt["lat"],
-                nxt["lng"],
-            )
-        )
-
-        current = (
-            nxt["lat"],
-            nxt["lng"],
-        )
-
-        remaining.remove(nxt)
-
-    legs = []
-
-    cumulative_km = 0.0
-
-    cumulative_min = 0.0
-
-    for i in range(
-        len(route_points) - 1
-    ):
-
-        distance = haversine_km(
-            *route_points[i],
-            *route_points[i + 1],
-        )
-
-        cumulative_km += distance
-
-        cumulative_min += (
-            distance
-            / AVG_SPEED_KMPH
-            * 60
-        )
-
-        legs.append({
-            "stop_id": route_ids[i],
-            "distance_km": round(
-                distance,
-                3,
-            ),
-            "eta_minutes": round(
-                cumulative_min,
-                1,
-            ),
-        })
-
-    return {
-        "order": route_ids,
-        "total_distance_km": round(
-            cumulative_km,
-            3,
-        ),
-        "legs": legs,
-        "polyline": [
-            list(point)
-            for point in route_points
-        ],
-    }
+    _route_cache[cache_key] = {"created": time.monotonic(), "result": result}
+    return result
 
 
 def solve_route(
@@ -421,36 +160,12 @@ def solve_route(
         }
 
     try:
-        print(
-            "GOOGLE ROUTES: calculating "
-            "real road route..."
-        )
-
-        result = _google_route(
-            start,
-            stops,
-        )
-
-        print(
-            "GOOGLE ROUTES: "
-            f"{result['total_distance_km']} km"
-        )
-
-        return result
-
+        return _google_routes_route(start, stops)
     except Exception as error:
-
-        print(
-            "GOOGLE ROUTES FAILED: "
-            f"{error}"
-        )
-
-        print(
-            "FALLBACK: using "
-            "straight-line routing."
-        )
-
-        return _fallback_route(
-            start,
-            stops,
-        )
+        return {
+            "order": [stop["id"] for stop in stops],
+            "total_distance_km": 0.0,
+            "legs": [],
+            "polyline": [],
+            "route_error": f"Road routing unavailable: {error}",
+        }

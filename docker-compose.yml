@@ -11,8 +11,13 @@ services:
     volumes:
       - foodbridge_db:/app/backend/db
       - foodbridge_uploads:/app/backend/uploads
+    env_file:
+      - ./backend/.env
     environment:
       - DATABASE_URL=sqlite:///./db/foodbridge.db
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - GOOGLE_MAPS_SERVER_API_KEY=${GOOGLE_MAPS_SERVER_API_KEY}
+      - GOOGLE_MAPS_HTTP_REFERRER=${GOOGLE_MAPS_HTTP_REFERRER:-http://localhost:5173/}
     restart: unless-stopped
 
   frontend:
@@ -21,6 +26,7 @@ services:
       dockerfile: Dockerfile.frontend
       args:
         VITE_API_BASE_URL: /api
+        VITE_GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
     container_name: foodbridge-frontend
     ports:
       - "3000:80"

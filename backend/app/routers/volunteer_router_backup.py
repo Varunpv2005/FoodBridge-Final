@@ -8,7 +8,6 @@ from app.db import get_db
 from app.auth import require_role
 from app.models_db import User, Delivery, DeliveryStatus, DeliveryStop, Donation, DonationStatus, LocationPing
 from app.schemas_v2 import DeliveryOut, LocationUpdate
-from app.services.simulate import launch_simulation
 from app.services.ws_manager import manager
 
 router = APIRouter()
@@ -30,7 +29,6 @@ def start_delivery(delivery_id: str, db: Session = Depends(get_db),
     db.add(delivery)
     db.commit()
     db.refresh(delivery)
-    launch_simulation(delivery_id)  # background GPS simulation; swap for real device pings in production
     return delivery
 
 
