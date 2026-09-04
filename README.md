@@ -1,216 +1,110 @@
-# FoodBridge AI Platform
+# FoodBridge
 
-A full-stack, real-time food-donation redistribution platform: four
-role-based dashboards (**Donor / NGO / Volunteer / Admin**), live map
-tracking, multi-stop vehicle routing, and five ML models wired into one
-continuous pipeline — from a donor's photo to a delivered plate of food.
+### An Intelligent AI-Driven Platform for Surplus Food Redistribution, Demand Forecasting, and Expiry-Aware Logistics
 
-```
-Donor uploads photo
-   │
-   ├─► CNN-style quality classifier ──► reject if spoiled
-   │
-   ├─► Degradation timeline regressor ──► hours-until-unsafe, urgency level
-   │
-   ├─► Anomaly detector (Isolation Forest + SHAP) ──► flag suspicious donors for admin review
-   │
-   ├─► NGO assignment engine (XGBoost + SHAP, degradation-aware) ──► best-fit NGO, explained
-   │
-   └─► Volunteer + multi-stop router (nearest-neighbour + 2-opt) ──► live GPS-tracked delivery
-                                                                         │
-                                                                         └─► Feedback loop (sentiment model) updates donor trust / NGO sentiment / volunteer rating
-```
+FoodBridge is a real-time food donation redistribution platform designed to reduce food wastage by intelligently connecting food donors with NGOs and volunteers.
 
-## Project layout
+The platform combines food-risk estimation, intelligent donor-NGO matching, expiry-aware logistics, volunteer allocation, real-time GPS tracking, demand forecasting, and an AI-powered conversational assistant into a unified system.
 
-```
-foodbridge/
-├── ml/
-│   ├── data/                        # your uploaded datasets + generated synthetic data
-│   ├── scripts/train_*.py           # 5 training scripts, one per model
-│   └── models/*.joblib              # trained artifacts
-├── backend/
-│   └── app/
-│       ├── main.py                  # FastAPI app, all routers wired in
-│       ├── models_db.py             # SQLAlchemy schema (users, donations, deliveries, feedback...)
-│       ├── auth.py                  # JWT auth + role-based access control
-│       ├── seed.py                  # demo accounts (donors/NGOs/volunteers/admin around Mysuru)
-│       ├── services/
-│       │   ├── quality.py           # image quality + degradation timeline inference
-│       │   ├── assignment.py        # NGO matching: XGBoost + SHAP + degradation feasibility filter
-│       │   ├── routing.py           # multi-stop consolidation + volunteer assignment
-│       │   ├── geo.py                # haversine + nearest-neighbour/2-opt VRP heuristic
-│       │   ├── anomaly.py           # Isolation Forest + live SHAP explainer
-│       │   ├── behavior.py          # builds donor behavioural features from DB history
-│       │   └── ws_manager.py        # WebSocket pub/sub for live tracking
-│       └── routers/                 # auth, donor, ngo, volunteer, admin, feedback, ws, + standalone ML
-├── frontend/
-│   └── src/
-│       ├── pages/donor|ngo|volunteer|admin/   # 4 role dashboards
-│       ├── components/MapView.jsx   # shared Google Maps renderer
-│       ├── hooks/useTrackingSocket.js
-│       └── context/AuthContext.jsx
-├── docker-compose.yml
-└── start.sh                         # one-command local dev startup
-```
+---
 
-## Run it
+## 📌 Project Overview
 
-**Local (no Docker)** — requires Python 3.10+, Node 18+:
-```bash
-./start.sh
-```
-Backend: http://localhost:8000 (docs at `/docs`) · Frontend: http://localhost:5173
+Large quantities of surplus food from restaurants, events, institutions, households, and other sources are discarded because suitable recipients and transportation cannot always be identified within the food's safe consumption window.
 
-**Docker:**
-```bash
-docker compose up --build
-```
-Frontend: http://localhost:3000 · Backend: http://localhost:8000/docs
+FoodBridge addresses this problem through an integrated digital platform that coordinates:
 
-**Demo accounts** (password for all: `demo1234`), auto-seeded on first backend start:
-| Role | Email |
-|---|---|
-| Admin | admin@foodbridge.demo |
-| Donor | donor1@foodbridge.demo, donor2@foodbridge.demo |
-| NGO | ngo1@foodbridge.demo (Sparsh), ngo2@foodbridge.demo (Green Hope), ngo3@foodbridge.demo (Akshaya Trust) |
-| Volunteer | volunteer1@foodbridge.demo (bike, 40 plates), volunteer2@foodbridge.demo (van, 150 plates) |
+**Donor → NGO → Volunteer → Delivery**
 
-## Walkthrough for a demo / viva
+The system evaluates donated food, identifies suitable NGOs, recommends the most appropriate recipient, automatically assigns an eligible volunteer after NGO acceptance, and tracks the delivery using real-time GPS.
 
-1. **Log in as donor1.** Go to "New Donation," attach a food photo, click a
-   spot on the map, submit. Watch the response: quality label → predicted
-   safe-hours window → matched NGO with a plain-English reason → assigned
-   volunteer, all in one request (~1–2s).
-2. **Log in as volunteer1** on a device with location access. See the assigned
-   delivery with its stop order and ETAs. Click "Start delivery" — this starts
-   real browser GPS tracking through the authenticated WebSocket. Allow
-   location access when prompted.
-3. **Log in as ngo1.** Watch the donation arrive in "Incoming Donations,"
-   confirm receipt once delivered, leave a star rating + comment on the
-   donor — this updates the donor's trust score and feeds the sentiment
-   model.
-4. **Log in as admin.** "Live Map" shows every donor/NGO/volunteer plus the
-   volunteer's real-time position (WebSocket-pushed, no polling).
-   "Anomaly Queue" shows any donations flagged by the anomaly detector,
-   each with a live SHAP explanation, and lets you approve or reject.
-5. **Multi-stop routing**: submit a second donation whose pickup point is
-   close to an NGO already on an active volunteer's route (same city area,
-   compatible capacity) — the assignment engine consolidates it into the
-   existing delivery instead of dispatching a new volunteer. Check the
-   updated stop list and route polyline.
+---
 
-## The 5 ML models
+## 🎯 Objectives
 
-| Model | Technique | Trained on | Result |
-|---|---|---|---|
-| Image quality | Transfer-learning-style feature pipeline (color histogram + texture → MLP) | Synthetic proxy dataset (no real photos were supplied — see Limitations) | 99.4% accuracy |
-| Degradation timeline | Random Forest regressor | Synthetic dataset generated from USDA/FDA time-temperature food-safety guidance | MAE 1.17 hours, R² 0.976 |
-| NGO feedback sentiment | TF-IDF + calibrated Linear SVM | Your `NGO_Feedback_Sentiment` data | 100%* |
-| Explainable NGO matching | XGBoost + live SHAP TreeExplainer | Your `Historical_Match_Training` data | 78.2% ROC-AUC |
-| Donation anomaly detection | Isolation Forest + Random Forest + live SHAP | Your `donation_anomaly_dataset` | 100% ROC-AUC* |
+The major objectives of FoodBridge are:
 
-\* These two datasets are heavily templated/near-perfectly-separable by
-construction (see Limitations) — treat as pipeline sanity checks, not
-real-world generalization claims.
+- Reduce surplus food wastage.
+- Connect food donors with suitable NGOs in real time.
+- Estimate food spoilage and risk using software-based analysis.
+- Consider food quantity, compatibility, urgency, capacity, and distance during matching.
+- Automatically allocate suitable volunteers after NGO acceptance.
+- Optimize delivery routes using real road-network information.
+- Track active deliveries using real-time GPS.
+- Detect route deviations during delivery.
+- Support demand forecasting for future planning.
+- Provide multilingual and conversational assistance.
+- Provide administrators with system monitoring and evaluation tools.
 
-## What's genuinely novel here (good material for your paper's Contributions section)
+---
 
-- **Degradation-aware NGO assignment**: the matching engine doesn't just
-  rank NGOs by fit — it first *excludes* any NGO the volunteer can't
-  physically reach before the food's predicted spoilage window closes
-  (`services/assignment.py::assign_ngo`, `safety_margin` parameter), then
-  ranks the survivors by the SHAP-explainable XGBoost model. This couples
-  two otherwise-independent models (image/degradation + matching) into one
-  decision.
-- **Multi-stop consolidation heuristic**: new donations are checked against
-  every currently-active delivery for whether they fit within capacity and
-  add only a small detour (nearest-neighbour + 2-opt re-routing cost, see
-  `services/routing.py::try_consolidate`) before ever dispatching a new
-  volunteer — a lightweight, explainable alternative to a full VRP solver.
-- **Semi-supervised anomaly ensemble**: Isolation Forest's unsupervised
-  novelty score is fed as an extra feature into a supervised Random Forest
-  trained on analyst-reviewed labels, and SHAP explains the supervised
-  head live per-donation — the `novel_unseen_pattern` flag in
-  `services/anomaly.py` specifically surfaces cases the isolation forest
-  considers weird but the supervised model hasn't learned to recognize yet.
-- **Closed feedback loop**: NGO ratings of donor food quality and
-  donor/admin ratings of volunteer delivery update rolling trust scores
-  (`routers/feedback_router.py`) that feed back into the next matching
-  decision — trust isn't a static field, it evolves with the platform's use.
+## ✨ Key Features
 
-## Limitations (put these in your paper — reviewers respect this more than silence)
+### 1. Donor Management
 
-1. **Templated data**: the sentiment dataset has only ~26 unique comment
-   templates repeated 1,000×, and the anomaly labels are cleanly
-   separable by construction — both give inflated (100%) test accuracy.
-   Retrain on organically collected data before any real deployment claim.
-2. **No real food photos**: the image classifier trains on a procedurally
-   generated proxy dataset (color/texture cues), not photographs — see
-   `ml/scripts/train_image_quality_model.py` docstring for exactly how and
-   why, and the "Swapping in a real CNN" section below.
-3. **Synthetic degradation timeline**: generated from published food-safety
-   *guidance* (USDA 2-hour rule, Bacillus cereus risk for rice dishes),
-   not lab-measured spoilage sensors — defensible as a guideline-informed
-   proxy, but real TVB-N/gas-sensor data would be stronger for production.
-4. **Physical GPS requirement**: live volunteer tracking requires a browser or
-   phone that provides real geolocation permission. The backend validates and
-   persists each delivery-specific location update before broadcasting it to
-   authorized clients.
-5. **VRP heuristic, not an exact solver**: nearest-neighbour + 2-opt is a
-   standard, citable approximation for small stop counts, not a globally
-   optimal solution — fine for a handful of stops per vehicle, would need
-   OR-Tools/a proper MILP solver at real fleet scale.
+Donors can:
 
-## Swapping in real BERT / a real CNN later
+- Create food donation requests.
+- Enter food type and quantity.
+- Specify preparation/cooking time.
+- Select pickup location.
+- Upload food images.
+- View food safety/risk information.
+- Track donation status.
+- Track assigned volunteers.
+- Monitor delivery progress in real time.
 
-**Sentiment → BERT:**
-```python
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-tok = AutoTokenizer.from_pretrained("bert-base-uncased")
-model = AutoModelForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=3)
-# fine-tune on NGO_Feedback_Sentiment, then swap load_sentiment() in
-# backend/app/utils/model_loader.py for a HF pipeline — routers don't change.
-```
+---
 
-**Image quality → MobileNetV2 transfer learning:**
-```python
-import torch, torchvision
-backbone = torchvision.models.mobilenet_v2(weights="IMAGENET1K_V1")
-backbone.classifier[1] = torch.nn.Linear(backbone.last_channel, 2)
-# fine-tune on real donor photos, then swap classify_image_bytes() in
-# backend/app/services/quality.py — the /predict API contract is unchanged.
-```
+### 2. Food Risk Estimation
 
-## Environment notes
+FoodBridge evaluates donated food using software-based food-risk estimation.
 
-- Auth: JWT (`python-jose`), bcrypt password hashing, role-based route
-  guards (`require_role` in `backend/app/auth.py`).
-- Database: SQLite by default (zero-config), swap via `DATABASE_URL` env
-  var to Postgres with no code changes (plain SQLAlchemy).
-- Maps: Google Maps JavaScript API in the browser and Google Routes API on the
-   server. Configure `GOOGLE_MAPS_API_KEY` as a browser-referrer-restricted
-   key and, for server requests using the same existing key, set
-   `GOOGLE_MAPS_HTTP_REFERRER` to an allowed application origin.
-   The frontend Vite config reuses `GOOGLE_MAPS_API_KEY` from
-   `backend/.env` for local development; Docker receives it as a build arg.
-- Real-time: native WebSockets (`/ws/track/{channel}`) — one channel per
-  delivery for donor/NGO viewers, plus a global `admin` channel for the
-  live ops map.
+The system considers factors such as:
 
-### Google Maps setup
+- Food type
+- Quantity
+- Time since preparation
+- Safe consumption window
+- Available food information
+- Risk-related characteristics
 
-Enable Maps JavaScript API, Places API, and Routes API in Google Cloud. The
-browser key must be restricted to the application's allowed HTTP referrers.
-The backend can use the existing key when its allowed HTTP referrer is sent;
-for production, a separate server-authorized key is recommended but is not
-required by this implementation. Run Docker with the backend environment file
-available for interpolation:
+The result is presented as a food-risk score with supporting factors.
 
-```bash
-docker compose --env-file backend/.env up --build
-```
+---
 
-The existing real GPS and WebSocket flow is preserved: device location posts
-to `/api/volunteer/location`, and authorized viewers receive updates through
-`/ws/track/{channel}`.
+### 3. Intelligent NGO Matching
+
+Instead of automatically assigning a donation to an NGO, FoodBridge recommends the most suitable NGO.
+
+The matching process considers:
+
+- Geographic distance
+- Estimated travel time
+- NGO capacity
+- Food compatibility
+- Donation urgency
+- Food-risk/safe-window constraints
+- Matching model score
+- NGO feedback information
+
+The selected NGO receives a request and can verify the donation before accepting it.
+
+### NGO Workflow
+
+```text
+Donation Created
+       ↓
+Suitable NGO Recommended
+       ↓
+NGO Request Sent
+       ↓
+NGO Verifies Donation
+       ↓
+   ┌───────────────┐
+   │               │
+Accept           Reject
+   │               │
+   ↓               ↓
+Volunteer       Next suitable
+Allocation       NGO Request
