@@ -47,10 +47,14 @@ docker-compose.override.yml
 
 # Local/runtime files
 backend/foodbridge.db
+foodbridge.db
 backend/uploads/
-.venv/
-__pycache__/
-*.pyc
-.env
-.env.*
+uploads/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+.pytest_cache/
+
+# Local test artifact
+uploaded_real_food_test.jpg
 
