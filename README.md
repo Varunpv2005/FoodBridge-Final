@@ -1847,10 +1847,6 @@ Varun PV
 
 Yashwanth TH
 
-Harsha K Gurumallesh
-
-Department
-
 Department of Computer Science and Engineering
 
 Vidyavardhaka College of Engineering, Mysuru
