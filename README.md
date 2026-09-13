@@ -20,22 +20,22 @@ https://github.com/Varunpv2005/FoodBridge-Final
 
 ## 📑 Contents
 
-- [Overview](#-overview)
-- [Features](#-key-features)
-- [Workflow](#-end-to-end-workflow)
-- [Architecture](#-system-architecture)
-- [Technology Stack](#-technology-stack)
-- [AI & Machine Learning](#-ai-and-machine-learning)
-- [Intelligent Routing & Live Tracking](#-expiry-aware-routing)
-- [Role-Based Dashboards](#-role-based-system)
-- [Security](#-security)
-- [Installation](#-installation)
-- [Testing & Evaluation](#-evaluation)
-- [Limitations](#-limitations)
-- [Future Enhancements](#-future-enhancements)
-- [Contributors](#-contributors)
----
-
+| Section | Description |
+|---|---|
+| [Overview](#-overview) | Project introduction and purpose |
+| [Key Features](#-key-features) | Major FoodBridge capabilities |
+| [End-to-End Workflow](#-end-to-end-workflow) | Complete donation-to-delivery process |
+| [System Architecture](#-system-architecture) | Overall technical architecture |
+| [Technology Stack](#-technology-stack) | Frontend, backend, database, AI/ML and APIs |
+| [AI & Machine Learning](#-ai-and-machine-learning) | Risk detection, demand forecasting, matching and SHAP |
+| [Intelligent Routing & Live Tracking](#-expiry-aware-routing) | Google Routes, GPS and real-time WebSocket tracking |
+| [Role-Based Dashboards](#-role-based-system) | Donor, NGO, volunteer and admin functionality |
+| [Security](#-security) | Authentication, authorization and API security |
+| [Installation](#-installation) | Setup and configuration instructions |
+| [Testing & Evaluation](#-evaluation) | Testing, benchmarks and experimental results |
+| [Limitations](#-limitations) | Current research and system limitations |
+| [Future Enhancements](#-future-enhancements) | Planned improvements |
+| [Contributors](#-contributors) | Project contributors |
 # 🚀 Overview
 
 FoodBridge addresses the challenge of redistributing surplus food efficiently before it becomes unsuitable for consumption.
