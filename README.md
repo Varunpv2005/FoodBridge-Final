@@ -1,55 +1,71 @@
-# FoodBridge — AI-Driven Surplus Food Redistribution & Intelligent Logistics
+# 🍱 FoodBridge
 
-FoodBridge is an intelligent food redistribution platform designed to connect **food donors, NGOs, and volunteers** through an integrated AI-powered workflow.
+## AI-Driven Surplus Food Redistribution, Demand Forecasting & Intelligent Logistics
 
-The platform combines **food quality/risk assessment, demand forecasting, NGO matching, expiry-aware routing, Google Maps, real-time GPS tracking, WebSockets, receipt verification, feedback, and multilingual AI assistance** into a single end-to-end system.
+FoodBridge is an **AI-powered surplus food redistribution platform** designed to connect **food donors, NGOs, and volunteers** through an intelligent, real-time logistics workflow.
 
-The objective is to reduce food wastage while improving the speed, reliability, and transparency of surplus-food redistribution.
+The platform combines **food quality assessment, food-risk estimation, demand forecasting, intelligent NGO matching, explainable AI, expiry-aware routing, Google Maps, real-time GPS tracking, WebSocket communication, NGO receipt verification, feedback, and multilingual AI assistance** into a unified system.
+
+The primary goal of FoodBridge is to help reduce food wastage while improving the **efficiency, transparency, traceability, and coordination** of surplus food redistribution.
 
 ---
 
-## 🌐 Repository
+## 🌐 Project Repository
 
-**GitHub Repository**
+**FoodBridge-Final**
 
 https://github.com/Varunpv2005/FoodBridge-Final
 
 ---
 
-# 📌 Table of Contents
+# 📑 Table of Contents
 
 - [Overview](#-overview)
 - [Problem Statement](#-problem-statement)
+- [Motivation](#-motivation)
 - [Objectives](#-objectives)
 - [Key Features](#-key-features)
 - [End-to-End Workflow](#-end-to-end-workflow)
 - [System Architecture](#-system-architecture)
 - [Technology Stack](#-technology-stack)
-- [AI and ML Components](#-ai-and-ml-components)
-- [Food Risk Assessment](#-food-risk-assessment)
-- [Demand Forecasting](#-demand-forecasting)
-- [NGO Matching](#-ngo-matching)
-- [Expiry-Aware Routing](#-expiry-aware-routing)
-- [Real-Time GPS Tracking](#-real-time-gps-tracking)
-- [WebSocket Architecture](#-websocket-architecture)
-- [Google Maps and Google Routes](#-google-maps-and-google-routes)
-- [Role-Based Dashboards](#-role-based-dashboards)
-- [AI Assistant](#-ai-assistant)
-- [Receipt Verification and Feedback](#-receipt-verification-and-feedback)
-- [Security](#-security)
 - [Project Structure](#-project-structure)
+- [AI and Machine Learning](#-ai-and-machine-learning)
+- [Food Quality and Risk Assessment](#-food-quality-and-risk-assessment)
+- [Demand Forecasting](#-demand-forecasting)
+- [Intelligent NGO Matching](#-intelligent-ngo-matching)
+- [SHAP Explainability](#-shap-explainability)
+- [Expiry-Aware Routing](#-expiry-aware-routing)
+- [Google Maps Integration](#-google-maps-integration)
+- [Real-Time GPS Tracking](#-real-time-gps-tracking)
+- [WebSocket Live Tracking](#-websocket-live-tracking)
+- [Role-Based System](#-role-based-system)
+- [Donor Dashboard](#-donor-dashboard)
+- [NGO Dashboard](#-ngo-dashboard)
+- [Volunteer Dashboard](#-volunteer-dashboard)
+- [Admin Dashboard](#-admin-dashboard)
+- [Delivery Lifecycle](#-delivery-lifecycle)
+- [NGO Receipt Verification](#-ngo-receipt-verification)
+- [Feedback and Impact](#-feedback-and-impact)
+- [AI Assistant](#-ai-assistant)
+- [Multilingual Support](#-multilingual-support)
+- [Security](#-security)
+- [Data Integrity](#-data-integrity)
 - [Database](#-database)
 - [Environment Configuration](#-environment-configuration)
-- [Local Installation](#-local-installation)
+- [Installation](#-installation)
+- [Backend Setup](#-backend-setup)
+- [Frontend Setup](#-frontend-setup)
 - [Running the Application](#-running-the-application)
 - [Running Tests](#-running-tests)
-- [Frontend Build](#-frontend-build)
-- [Docker](#-docker)
+- [Frontend Production Build](#-frontend-production-build)
+- [Docker Support](#-docker-support)
 - [Evaluation](#-evaluation)
-- [Research and Experimental Results](#-research-and-experimental-results)
+- [Experimental Results](#-experimental-results)
 - [Limitations](#-limitations)
 - [Future Enhancements](#-future-enhancements)
-- [Important Notes](#-important-notes)
+- [Research Contribution](#-research-contribution)
+- [Project Verification](#-project-verification)
+- [Academic Context](#-academic-context)
 - [Contributors](#-contributors)
 - [License](#-license)
 
@@ -57,58 +73,1891 @@ https://github.com/Varunpv2005/FoodBridge-Final
 
 # 🚀 Overview
 
-FoodBridge addresses the problem of surplus food going to waste while nearby communities and NGOs may have unmet food requirements.
+FoodBridge addresses the challenge of redistributing surplus food efficiently before it becomes unsuitable for consumption.
 
-The platform coordinates the complete redistribution lifecycle:
+Traditional food redistribution can involve several disconnected activities:
+
+- Donation registration
+- Food quality assessment
+- Finding suitable NGOs
+- Volunteer coordination
+- Route planning
+- Delivery monitoring
+- Receipt confirmation
+- Feedback collection
+
+FoodBridge integrates these activities into a single coordinated workflow.
+
+The platform uses AI-assisted decision support to evaluate food risk and identify suitable NGO matches, while optimization and geospatial services assist with route planning and real-time delivery tracking.
+
+---
+
+# 🧩 Core Concept
+
+The complete FoodBridge workflow is:
 
 ```text
+                    ┌──────────────────┐
+                    │      DONOR       │
+                    └────────┬─────────┘
+                             │
+                             ▼
+                  Create Food Donation
+                             │
+                             ▼
+                 ┌─────────────────────┐
+                 │ AI Food Assessment  │
+                 │                     │
+                 │ • Image Assessment  │
+                 │ • Risk Estimation   │
+                 │ • Freshness         │
+                 │ • Degradation       │
+                 └──────────┬──────────┘
+                            │
+                            ▼
+                 Intelligent NGO Matching
+                            │
+                            ▼
+                    NGO Review / Accept
+                            │
+                            ▼
+                  Volunteer Assignment
+                            │
+                            ▼
+                 Expiry-Aware Routing
+                            │
+                            ▼
+                    Delivery Started
+                            │
+                            ▼
+                   Real-Time GPS
+                            │
+                            ▼
+                    WebSocket Updates
+                            │
+             ┌──────────────┼──────────────┐
+             ▼              ▼              ▼
+          DONOR            NGO           ADMIN
+             │              │              │
+             └──────────────┼──────────────┘
+                            │
+                            ▼
+                    Delivery Completed
+                            │
+                            ▼
+                  NGO Receipt Verification
+                            │
+                            ▼
+                     Feedback / Impact
+🎯 Problem Statement
+
+Surplus food is frequently generated by:
+
+Restaurants
+Events
+Institutions
+Households
+Organizations
+Other food providers
+
+At the same time, NGOs and communities may require food resources.
+
+The challenge is not simply identifying surplus food.
+
+A complete redistribution system must also answer:
+
+Is the food still suitable for redistribution?
+How urgent is the donation?
+Which NGO is appropriate?
+Does the NGO have enough capacity?
+Is the food compatible with the NGO's requirements?
+Which volunteer can handle the delivery?
+What route minimizes unnecessary delay?
+Can the donor see the delivery?
+Can the NGO verify what was actually received?
+
+FoodBridge addresses these questions through an integrated AI and logistics platform.
+
+💡 Motivation
+
+The project is motivated by the need for a more coordinated approach to surplus food redistribution.
+
+FoodBridge attempts to combine:
+
+AI
++
+Machine Learning
++
+Optimization
++
+Geospatial Services
++
+Real-Time Systems
++
+Human Decision Making
+
+into a single practical platform.
+
+🎯 Objectives
+
+The main objectives of FoodBridge are:
+
+Reduce surplus food wastage.
+Provide AI-assisted food quality and risk assessment.
+Estimate food demand using machine learning.
+Identify suitable NGO recipients.
+Explain NGO matching decisions using SHAP.
+Consider food freshness and degradation during logistics.
+Assign available volunteers.
+Generate road-based delivery routes.
+Track volunteers using real browser/device GPS.
+Synchronize delivery information using WebSockets.
+Provide live Google Maps visualization.
+Allow NGOs to verify received donations.
+Collect role-specific feedback.
+Provide multilingual AI assistance.
+Provide operational and experimental evaluation.
+Preserve human oversight over AI-assisted decisions.
+✨ Key Features
+🤖 Artificial Intelligence
+Food quality assessment
+Food risk estimation
+Freshness estimation
+Degradation estimation
+Demand forecasting
+NGO matching
+SHAP-based explainability
+AI assistant
+🛣️ Intelligent Logistics
+Expiry-aware route planning
+Google Routes integration
+Road-based route geometry
+ETA calculation
+Distance calculation
+Multi-stop delivery support
+Capacity-aware delivery planning
+📍 Real-Time Tracking
+High-accuracy browser GPS
+GPS accuracy information
+Timestamped location updates
+WebSocket communication
+Live volunteer location
+Donor live tracking
+NGO live tracking
+Admin live tracking
+👥 Collaboration
+Donors
+NGOs
+Volunteers
+Administrators
+🧾 Delivery Verification
+Expected quantity
+Received quantity
+Food condition
+Receipt verification
+Verification timestamp
+Feedback
+🌍 Accessibility
+Responsive interface
+Mobile volunteer experience
+English
+Hindi
+Kannada
+Voice-related capabilities where configured
+🔄 End-to-End Workflow
+Step 1 — Donation
+
+The donor creates a food donation by providing relevant information such as:
+
+Food type
+Quantity
+Preparation/cooked information
+Time-related information
+Storage information
+Expiry/spoilage information
+Food image where applicable
+Step 2 — AI Food Assessment
+
+The platform processes available food information.
+
+The system can provide:
+
+Image-based quality assessment
+Freshness information
+Food risk score
+Risk level
+Risk factors
+Recommendation
+
+The AI output is intended as decision support rather than laboratory-grade food safety certification.
+
+Step 3 — NGO Matching
+
+FoodBridge identifies potential NGO recipients based on multiple factors.
+
+The matching process considers factors such as:
+
+Distance
+Available capacity
+Food compatibility
+Food safety/freshness
+Storage capability
+Contextual information
+Degradation-aware feasibility
+Step 4 — NGO Decision
+
+The NGO reviews the recommendation and decides whether to accept the donation.
+
+AI does not automatically replace the NGO's decision.
+
+The system follows a:
+
+AI Recommendation
+       ↓
+Human Review
+       ↓
+NGO Decision
+
+model.
+
+Step 5 — Volunteer Assignment
+
+Once an NGO accepts a donation, an available volunteer can be assigned.
+
+Volunteer availability is considered during assignment.
+
+Step 6 — Route Generation
+
+FoodBridge generates a delivery route using the available route and delivery information.
+
+The routing process considers:
+
+Road distance
+Travel time
+Donation urgency
+Degradation
+Expiry constraints
+Multi-stop delivery
+Capacity constraints
+Detour considerations
+Step 7 — Live Delivery
+
+The volunteer starts the delivery.
+
+The browser/device obtains GPS information.
+
+Location information is sent through the WebSocket tracking system.
+
+Step 8 — Live Monitoring
+
+The donor, NGO, and administrator can receive relevant live delivery information.
+
+The map can show:
+
+Pickup
+Volunteer
+NGO/drop-off
+Route
+ETA
+Distance
+GPS status
+Last location update
+Step 9 — Delivery Completion
+
+The volunteer completes the delivery.
+
+The backend records the delivery state.
+
+Step 10 — Receipt Verification
+
+The NGO verifies the actual received donation.
+
+The NGO can record:
+
+Received quantity
+Food condition
+Verification
+Step 11 — Feedback
+
+Participants can provide appropriate feedback after the delivery.
+
+🏗️ System Architecture
+
+FoodBridge follows a three-tier architecture.
+
+┌─────────────────────────────────────────────────────┐
+│                    FRONTEND                         │
+│                                                     │
+│ React 18                                             │
+│ Vite                                                 │
+│ Tailwind CSS                                         │
+│ Google Maps                                          │
+│ Role-Based Dashboards                                │
+│ Live Tracking                                        │
+│ AI/ML Visualization                                  │
+└───────────────────────┬─────────────────────────────┘
+                        │
+                REST / WebSocket
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────┐
+│                     BACKEND                          │
+│                                                     │
+│ FastAPI                                              │
+│ SQLAlchemy                                           │
+│ Pydantic                                             │
+│ JWT Authentication                                   │
+│ Role-Based Access Control                            │
+│ WebSocket Services                                   │
+│ Matching                                             │
+│ Routing                                              │
+│ Delivery Management                                  │
+└───────────────────────┬─────────────────────────────┘
+                        │
+                        ▼
+┌─────────────────────────────────────────────────────┐
+│                  DATA / AI LAYER                     │
+│                                                     │
+│ SQLite                                               │
+│ XGBoost                                              │
+│ NumPy LSTM                                           │
+│ SHAP                                                 │
+│ Risk Models                                          │
+│ Forecasting Models                                   │
+│ Operational Records                                  │
+└─────────────────────────────────────────────────────┘
+🛠️ Technology Stack
+Frontend
+Technology	Purpose
+React 18	User interface
+Vite	Frontend development/build
+Tailwind CSS	Styling
+JavaScript	Application logic
+Google Maps	Map visualization
+@vis.gl/react-google-maps	Google Maps React integration
+Backend
+Technology	Purpose
+Python	Backend language
+FastAPI	REST API framework
+SQLAlchemy	ORM
+Pydantic	Validation/schema management
+SQLite	Relational database
+WebSockets	Real-time communication
+JWT	Authentication
+AI / ML
+Technology	Purpose
+XGBoost	Risk / matching / forecasting components
+NumPy	Numerical computation
+NumPy LSTM	Sequential demand forecasting
+SHAP	Model explainability
+TensorFlow/Keras	Model handling where applicable
+External Services
+Service	Purpose
+Google Maps Platform	Map visualization
+Google Routes API	Road routes, distance and travel time
+Groq-compatible LLM API	AI assistant
+Azure Speech	Speech functionality where configured
+📁 Project Structure
+FoodBridge-Final/
+│
+├── backend/
+│   │
+│   ├── app/
+│   │   ├── routers/
+│   │   ├── services/
+│   │   ├── utils/
+│   │   ├── models_db.py
+│   │   ├── schemas.py
+│   │   ├── schemas_v2.py
+│   │   └── ...
+│   │
+│   ├── tests/
+│   ├── requirements.txt
+│   └── ...
+│
+├── frontend/
+│   │
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   └── ...
+│   │
+│   ├── package.json
+│   └── ...
+│
+├── ml/
+│   └── models/
+│
+├── .env.example
+├── .gitignore
+├── Dockerfile.backend
+├── Dockerfile.frontend
+├── docker-compose.yml
+├── package-lock.json
+├── pytest.ini
+├── start.sh
+└── README.md
+🤖 AI and Machine Learning
+
+FoodBridge integrates multiple AI/ML components.
+
+The major intelligent components are:
+
+Food Image / Metadata
+        │
+        ▼
+Food Quality Assessment
+        │
+        ▼
+Risk / Freshness Estimation
+        │
+        ▼
+NGO Matching
+        │
+        ▼
+SHAP Explanation
+        │
+        ▼
+Delivery Planning
+        │
+        ▼
+Operational Tracking
+
+A separate demand forecasting pipeline estimates regional demand.
+
+🍱 Food Quality and Risk Assessment
+
+FoodBridge uses food information and image assessment to provide an AI-assisted risk estimate.
+
+The system can expose information such as:
+
+Risk score
+Risk level
+Freshness score
+Degradation information
+Risk factors
+Recommendation
+
+The frontend presents this information as an explainable decision-support interface.
+
+Important
+
+The risk system is not a laboratory-grade food safety testing system.
+
+It is intended to assist platform users in prioritizing and handling donations.
+
+📊 Demand Forecasting
+
+FoodBridge implements a hybrid forecasting approach combining:
+
+XGBoost
+16-hidden-unit NumPy LSTM
+
+Conceptually:
+
+                 Historical Data
+                       │
+             ┌─────────┴─────────┐
+             │                   │
+             ▼                   ▼
+       Tabular Features     Sequential Data
+             │                   │
+             ▼                   ▼
+          XGBoost            NumPy LSTM
+             │                   │
+             └─────────┬─────────┘
+                       ▼
+               Hybrid Forecast
+                       │
+                       ▼
+                Demand Estimate
+
+The conceptual model can be represented as:
+
+D_r(t) = f_XGB(F_tab) + f_LSTM(F_seq)
+
+The forecasting evaluation uses time-aware data splitting.
+
+🧠 Intelligent NGO Matching
+
+FoodBridge combines machine-learning-based scoring with feasibility filtering.
+
+Potential NGO candidates can be evaluated using factors including:
+
+Distance
+Available capacity
+Food compatibility
+Food safety/freshness
+Cold storage capability
+Contextual features
+Degradation-aware feasibility
+
+The resulting candidates are ranked according to the matching process.
+
+📊 SHAP Explainability
+
+FoodBridge integrates SHAP-based explanation for the NGO matching model.
+
+Instead of showing only:
+
+Match Score: 91%
+
+the system can expose contributing factors.
+
+Conceptually:
+
+NGO Match
+   │
+   ▼
+XGBoost Model
+   │
+   ▼
+Prediction
+   │
+   ▼
+SHAP TreeExplainer
+   │
+   ▼
+Feature Importance
+
+This makes the AI recommendation easier for an NGO or evaluator to understand.
+
+The AI is positioned as:
+
+Decision support, not autonomous decision replacement.
+
+🛣️ Expiry-Aware Routing
+
+FoodBridge uses:
+
+Expiry-Aware Degradation-Penalized Permutation Routing with Google Routes Integration
+
+The route planner considers more than geographic distance.
+
+Relevant factors include:
+
+Road distance
+Estimated travel time
+Expiry constraints
+Food degradation
+Lateness
+Stop sequence
+Delivery capacity
+Detour constraints
+
+For smaller route combinations, candidate stop orders can be evaluated using road-based route information.
+
+The implementation avoids uncontrolled factorial growth in external route API calls by limiting exhaustive permutation search and using an expiry-aware approach for larger stop sets.
+
+🗺️ Google Maps Integration
+
+Google Maps is the primary map provider used by FoodBridge.
+
+The application uses Google Maps for:
+
+Interactive maps
+Route visualization
+Marker rendering
+Volunteer tracking
+Pickup visualization
+NGO location visualization
+
+Google Routes is used for road-based route information.
+
+The route data can provide:
+
+Distance
+Duration
+Route geometry
+
+The frontend decodes and displays the route geometry.
+
+📍 Real-Time GPS Tracking
+
+Volunteer location is obtained from the browser/device geolocation API.
+
+The application uses:
+
+navigator.geolocation.watchPosition()
+
+with high-accuracy settings.
+
+Location information includes:
+
+Latitude
+Longitude
+Accuracy
+Timestamp
+
+The application validates incoming GPS values.
+
+It also handles stale location updates using timestamps so that an older location does not overwrite a newer position.
+
+🔌 WebSocket Live Tracking
+
+FoodBridge uses WebSockets to synchronize live delivery location information.
+
+The general flow is:
+
+Volunteer Device
+      │
+      │ GPS Location
+      ▼
+WebSocket Connection
+      │
+      ▼
+Backend
+      │
+      ├── Persist LocationPing
+      │
+      ├── Donor Channel
+      │
+      ├── NGO Channel
+      │
+      ├── Admin Channel
+      │
+      └── Volunteer Channel
+      │
+      ▼
+Live Map Consumers
+
+This allows relevant users to receive live updates without relying entirely on repeated polling.
+
+🔐 WebSocket Authentication
+
+WebSocket connections use short-lived authentication tickets.
+
+The general process is:
+
+Authenticated User
+        │
+        ▼
+Request WebSocket Ticket
+        │
+        ▼
+Short-Lived Ticket
+        │
+        ▼
+WebSocket Connection
+        │
+        ▼
+Role / Channel Authorization
+
+This reduces the need to expose long-lived authentication credentials directly through WebSocket connection URLs.
+
+Role-specific authorization ensures users only access permitted tracking channels.
+
+👥 Role-Based System
+
+FoodBridge provides four main user roles:
+
+DONOR
+NGO
+VOLUNTEER
+ADMIN
+
+Each role receives a specialized dashboard and workflow.
+
+👤 Donor Dashboard
+
+The donor can:
+
+Create donations
+Upload food images
+View food assessment
+View risk information
+View freshness/degradation
+Track donation status
+View NGO matching
+View assigned volunteer
+Track active delivery
+View live map
+View donation history
+View personal impact
+Submit feedback
+Manage profile
+Donor Navigation
+Dashboard
+My Donations
+New Donation
+Live Deliveries
+Donation History
+My Impact
+Profile & Settings
+🏢 NGO Dashboard
+
+NGOs can:
+
+View incoming donations
+Review donation information
+Review matching information
+Accept/reject donation requests
+Assign volunteers
+View active deliveries
+Track volunteers
+View live maps
+Verify receipts
+Record received quantity
+Record food condition
+Rate donors
+View delivery history
+View NGO impact
+Manage profile
+NGO Navigation
+Dashboard
+Incoming Donations
+Donation Requests
+Active Deliveries
+Live Delivery Map
+Delivery History
+NGO Impact
+Profile & Settings
+🚴 Volunteer Dashboard
+
+Volunteers can:
+
+View assigned deliveries
+Manage availability
+View active delivery
+Start delivery
+View route
+View next stop
+View ETA
+View distance
+View GPS status
+Share live location
+Complete delivery
+View delivery history
+View performance
+Access GPS diagnostics
+Manage profile
+Volunteer Navigation
+Dashboard
+My Deliveries
+Assigned Deliveries
+Active Delivery
+Live Route
+GPS & Location
+Delivery History
+My Performance
+Profile & Settings
+
+The active delivery interface is designed to be usable on mobile devices.
+
+🛡️ Admin Dashboard
+
+Administrators can access:
+
+System overview
+User management
+Live delivery monitoring
+AI/ML capabilities
+Operational information
+Evaluation results
+Anomaly-related workflows
+
+The admin interface distinguishes between:
+
+LIVE OPERATIONAL DATA
+
+and:
+
+OFFLINE / EXPERIMENTAL EVALUATION
+
+This distinction is important when presenting research results.
+
+🔄 Delivery Lifecycle
+
+A typical FoodBridge delivery progresses through:
+
+Donation Created
+       ↓
+Processing
+       ↓
+AI Assessment
+       ↓
+NGO Matched
+       ↓
+NGO Accepted
+       ↓
+Volunteer Assigned
+       ↓
+Ready
+       ↓
+Delivery Started
+       ↓
+Live Tracking
+       ↓
+Delivered
+       ↓
+NGO Receipt Verification
+       ↓
+Feedback
+
+The backend acts as the authoritative source for delivery state.
+
+🧾 NGO Receipt Verification
+
+FoodBridge distinguishes between:
+
+Delivery Completion
+
+and:
+
+NGO Receipt Verification
+
+After a volunteer completes a delivery, the NGO can verify the received donation.
+
+The receipt process can include:
+
+Expected quantity
+Received quantity
+Food condition
+Verification timestamp
+
+This provides a clearer record of whether the intended donation was actually received.
+
+⭐ Feedback and Impact
+
+FoodBridge supports feedback after completed interactions.
+
+Feedback can be associated with the appropriate role and delivery relationship.
+
+The platform also provides impact/performance views for relevant users.
+
+Examples include:
+
+Donor
+Donation history
+Contribution/impact information
+NGO
+Received donations
+Delivery history
+NGO impact
+Volunteer
+Delivery history
+Performance information
+🤖 AI Assistant
+
+FoodBridge includes a platform-specific AI assistant.
+
+The assistant can answer questions related to:
+
+FoodBridge functionality
+Donation workflows
+NGO matching
+Food risk
+Food degradation
+Demand forecasting
+Routing
+Live tracking
+Volunteer coordination
+Delivery lifecycle
+AI/ML architecture
+Platform usage
+
+The assistant is designed to remain focused on FoodBridge-related interactions.
+
+It can also handle friendly conversational interaction.
+
+🌍 Multilingual Support
+
+The AI assistant supports multilingual interaction including:
+
+English
+Hindi
+Kannada
+
+Voice-related capabilities can be used when the required speech services and configuration are available.
+
+🔐 Security
+
+FoodBridge implements multiple security mechanisms.
+
+JWT Authentication
+
+Users authenticate using JWT-based authentication.
+
+Role-Based Access Control
+
+Different roles are restricted to their intended operations.
+
+Roles include:
+
+Donor
+NGO
+Volunteer
+Admin
+WebSocket Security
+
+WebSocket connections use:
+
+short-lived authentication tickets
+role/channel authorization
+controlled connection handling
+CORS
+
+Allowed origins are configurable using environment variables.
+
+Admin Registration Protection
+
+Public registration cannot directly create administrator accounts.
+
+Upload Validation
+
+Uploaded images are protected using validation such as:
+
+file size restrictions
+content/magic-byte validation
+supported image handling
+Feedback Protection
+
+The platform contains protection against duplicate or abusive feedback behavior.
+
+Secrets Management
+
+API keys and credentials should never be committed to Git.
+
+Use:
+
+.env
+
+locally.
+
+Use:
+
+.env.example
+
+as the configuration template.
+
+🛡️ Data Integrity
+
+FoodBridge follows several data-integrity principles.
+
+Backend as Source of Truth
+
+Important delivery state is persisted by the backend.
+
+Timestamp Protection
+
+Older GPS packets should not overwrite newer GPS information.
+
+Capacity Protection
+
+Volunteer/NGO capacity changes are handled with validation and rollback behavior where required.
+
+Expiry Protection
+
+Expired donations are prevented from entering inappropriate new matching/acceptance flows.
+
+Human Oversight
+
+AI outputs do not automatically replace human decisions.
+
+🗄️ Database
+
+FoodBridge uses:
+
+SQLite
+
+as its default database.
+
+SQLAlchemy provides the ORM layer.
+
+Important entities include:
+
+User
+Donor
+NGO
+Donation
+Delivery
+DeliveryStop
+Assignment
+Route
+Forecast
+LocationPing
+Feedback
+ExperimentRecord
+
+SQLite was selected because it is suitable for the current academic/final-year project scope and provides:
+
+simple setup
+portability
+minimal deployment requirements
+relational persistence
+easy local development
+
+Because SQLAlchemy is used, the database architecture can be migrated to a larger relational database later if required.
+
+⚙️ Environment Configuration
+
+The repository includes:
+
+.env.example
+
+Create a local environment file from this template.
+
+Important
+
+Never commit:
+
+.env
+backend/.env
+frontend/.env
+
+Never put real API keys into .env.example.
+
+A typical configuration may include variables similar to:
+
+FOODBRIDGE_SECRET=your-secure-secret
+
+ALLOWED_ORIGINS=http://localhost:5173
+
+DATABASE_URL=sqlite:///./foodbridge.db
+
+GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+
+GOOGLE_MAPS_SERVER_API_KEY=your-google-maps-server-api-key
+
+GOOGLE_MAPS_HTTP_REFERRER=http://localhost:5173/
+
+GROQ_API_KEY=your-groq-api-key
+
+GROQ_MODEL=your-supported-groq-model
+
+GROQ_TIMEOUT_SECONDS=15
+
+AZURE_SPEECH_KEY=your-azure-speech-key
+
+AZURE_SPEECH_REGION=your-azure-speech-region
+
+Use the exact variable names provided in the repository's .env.example.
+
+💻 Installation
+Prerequisites
+
+Recommended software:
+
+Git
+Python 3.x
+Node.js
+npm
+Modern web browser
+
+Some functionality additionally requires external service credentials.
+
+📥 Clone the Repository
+git clone https://github.com/Varunpv2005/FoodBridge-Final.git
+
+Enter the project:
+
+cd FoodBridge-Final
+🐍 Backend Setup
+
+Create a Python virtual environment.
+
+Windows
+python -m venv .venv
+
+Activate it:
+
+.venv\Scripts\Activate.ps1
+Linux / macOS
+python3 -m venv .venv
+
+Activate:
+
+source .venv/bin/activate
+Install Backend Dependencies
+
+From the project root:
+
+pip install -r backend/requirements.txt
+🔑 Configure Backend Environment
+
+Create your local environment configuration.
+
+Use:
+
+.env.example
+
+as the template.
+
+Do not copy another developer's .env.
+
+Add your own API keys and secrets.
+
+⚛️ Frontend Setup
+
+Enter the frontend:
+
+cd frontend
+
+Install dependencies:
+
+npm install
+
+Return to the root:
+
+cd ..
+
+Configure frontend environment variables required by the application.
+
+▶️ Running the Application
+Start Backend
+
+From the project root:
+
+cd backend
+
+Run FastAPI:
+
+uvicorn app.main:app --reload
+
+The backend is typically available at:
+
+http://127.0.0.1:8000
+Start Frontend
+
+Open a second terminal.
+
+From the project root:
+
+cd frontend
+
+Run:
+
+npm run dev
+
+Vite will display the local development URL.
+
+Typically:
+
+http://localhost:5173
+🧪 Running Tests
+
+Backend tests are located in:
+
+backend/tests/
+
+Run:
+
+cd backend
+pytest -q
+
+The project test suite covers important application areas including:
+
+authentication
+security
+routing
+delivery behavior
+feedback
+WebSocket-related functionality
+API behavior
+expiry logic
+capacity logic
+AI/ML integration behavior
+🏗️ Frontend Production Build
+
+From:
+
+cd frontend
+
+run:
+
+npm run build
+
+The production output is generated in:
+
+frontend/dist/
+
+The build directory is intentionally excluded from Git.
+
+🐳 Docker Support
+
+The repository contains:
+
+Dockerfile.backend
+Dockerfile.frontend
+docker-compose.yml
+
+These files provide containerization support for the application.
+
+Before running Docker, ensure required environment variables and external API credentials are configured.
+
+📈 Evaluation
+
+FoodBridge includes an evaluation interface designed to distinguish between:
+
+Live Operational Data
+
+Data generated by actual application activity.
+
+and:
+
+Offline / Experimental Evaluation
+
+Research or benchmark results obtained from the project's evaluation setup.
+
+This distinction prevents experimental results from being presented as guaranteed live-production performance.
+
+🔬 Experimental Results
+
+The associated FoodBridge research evaluation reports the following experimental results:
+
+Metric	FoodBridge	Comparison
+NGO Matching Accuracy	91.7%	Manual: 52.1%, Rule-based: 68.4%
+Delivery Time	42 min	Manual: 95 min, Rule-based: 71 min
+Spoilage Incidents	6.8	Manual: 23.5, Rule-based: 15.2
+Demand Forecast RMSE	7.2%	—
+Volunteer Utilization	82%	Baseline: 45%
+
+These results belong to the project's offline/experimental evaluation context.
+
+They should not be interpreted as guaranteed real-world production performance.
+
+📊 Research Evaluation Pipeline
+
+The evaluation considers multiple aspects of the platform.
+
+Historical / Experimental Data
+             │
+             ▼
+       Model Evaluation
+             │
+      ┌──────┼───────┐
+      │      │       │
+      ▼      ▼       ▼
+   Demand  Matching  Risk
+ Forecast  Quality  Exposure
+      │      │       │
+      └──────┼───────┘
+             ▼
+      Logistics Evaluation
+             │
+      ┌──────┼───────────┐
+      ▼      ▼           ▼
+ Delivery  Spoilage   Volunteer
+ Performance Exposure  Utilization
+🧠 AI Decision-Support Philosophy
+
+FoodBridge follows a human-in-the-loop approach.
+
+The system is designed as:
+
+AI Prediction
+     ↓
+Explanation
+     ↓
+Human Review
+     ↓
+Operational Decision
+
+This is particularly relevant for:
+
+food risk
+NGO matching
+delivery decisions
+receipt verification
+
+The platform does not position machine-learning predictions as unquestionable decisions.
+
+📱 Responsive Design
+
+The frontend supports different screen sizes including:
+
+Desktop
+Laptop
+Tablet
+Mobile
+
+Special attention is given to the volunteer workflow.
+
+A volunteer may use a mobile device during an active delivery, so important information such as:
+
+Delivery status
+Next stop
+ETA
+Distance
+GPS status
+Route
+Delivery controls
+
+is designed to remain accessible.
+
+🔄 Refresh Recovery
+
+The application is designed to restore important delivery information from backend state after a dashboard refresh.
+
+Relevant state can include:
+
+Delivery ID
+Donation ID
+Delivery status
+Route
+Route geometry
+Distance
+ETA
+Latest persisted GPS location
+Location timestamp
+Stop information
+Receipt information
+
+This reduces dependence on temporary React in-memory state.
+
+🔌 WebSocket Reconnection
+
+The shared tracking socket implementation includes reconnection behavior.
+
+The architecture is designed to:
+
+reconnect after temporary disconnection
+use the authentication flow for WebSocket connections
+avoid relying on long-lived authentication tokens
+maintain live tracking state
+prevent stale location updates from replacing newer positions
+
+Actual network behavior can still depend on the runtime environment.
+
+🗺️ Live Tracking Architecture
+
+The live tracking flow can be summarized as:
+
+Volunteer
+   │
+   │ Browser GPS
+   ▼
+Latitude / Longitude
+Accuracy / Timestamp
+   │
+   ▼
+WebSocket
+   │
+   ▼
+FastAPI Backend
+   │
+   ├───────────────┐
+   │               │
+   ▼               ▼
+LocationPing    Broadcast
+   │               │
+   └───────┬───────┘
+           │
+   ┌───────┼─────────┐
+   ▼       ▼         ▼
+ Donor     NGO      Admin
+   │       │         │
+   └───────┼─────────┘
+           ▼
+      Google Maps
+🧾 Delivery and Traceability
+
+FoodBridge attempts to maintain traceability throughout the donation lifecycle.
+
+Important information can be associated with:
+
+Donation
+   ↓
+Delivery
+   ↓
+Delivery Stop
+   ↓
+Route
+   ↓
+Volunteer
+   ↓
+GPS Location
+   ↓
+Completion
+   ↓
+Receipt
+   ↓
+Feedback
+
+This provides a consistent representation of the delivery process.
+
+🚨 Expiry and Degradation Awareness
+
+FoodBridge considers food freshness and degradation during operational decision-making.
+
+A donation can become less suitable for matching or delivery as time progresses.
+
+The system therefore incorporates expiry/degradation information into relevant workflow decisions.
+
+This helps prioritize time-sensitive food redistribution.
+
+🧭 Routing Philosophy
+
+FoodBridge does not simply optimize for shortest geographic distance.
+
+The routing objective considers operational factors such as:
+
+Route Cost
++
+Late Delivery Cost
++
+Food Risk / Degradation
+-
+Matching Benefit
+
+subject to constraints such as:
+
+capacity
+vehicle constraints
+food compatibility
+timing
+expiry
+
+The actual implementation uses Google Routes road information together with expiry-aware route selection.
+
+🧪 Verification Status
+
+The current implementation has undergone extensive code-level and automated verification.
+
+Backend
+
+The current verified test suite has reported:
+
+35/35 tests passing
+Frontend
+
+The production build has successfully completed using:
+
+npm run build
+Google Maps
+
+Verified implementation includes:
+
+Google Maps provider
+Google route integration
+route polyline decoding
+pickup markers
+NGO markers
+volunteer markers
+live map state
+GPS
+
+Implemented:
+
+browser geolocation
+high-accuracy mode
+GPS accuracy
+timestamped location updates
+coordinate validation
+stale-location protection
+WebSockets
+
+Implemented:
+
+short-lived authentication tickets
+role-based authorization
+live location broadcasts
+donor tracking
+NGO tracking
+admin tracking
+reconnect handling
+UI/UX
+
+Implemented:
+
+role-specific dashboards
+consistent FoodBridge visual language
+responsive layouts
+loading states
+empty states
+error states
+AI visualization
+delivery lifecycle visualization
+live tracking interfaces
+mobile volunteer experience
+⚠️ Limitations
+
+FoodBridge is an academic/final-year research-oriented project and has several limitations.
+
+1. Historical Data Dependency
+
+Demand forecasting quality depends on the availability and quality of historical data.
+
+2. Food Risk Estimation
+
+The food risk model is an AI-assisted software estimate.
+
+It is not equivalent to:
+
+laboratory testing
+professional food safety inspection
+certified food safety measurement
+3. Routing Dependency
+
+Routing depends on:
+
+geographic information
+Google Routes availability
+network connectivity
+transportation conditions
+freshness information
+4. GPS Dependency
+
+GPS accuracy depends on:
+
+device hardware
+browser support
+user permission
+satellite availability
+network conditions
+physical environment
+5. External Services
+
+Some functionality requires external services and valid credentials.
+
+Examples include:
+
+Google Maps Platform
+Google Routes
+LLM services
+Speech services
+6. Experimental Evaluation
+
+Some reported research results are based on:
+
+offline evaluation
+simulation
+pilot-style testing
+
+They should not be interpreted as large-scale production benchmarks.
+
+🔮 Future Enhancements
+
+Potential future extensions include:
+
+🚦 Real-Time Traffic-Aware Routing
+
+Integrate more detailed traffic information into delivery planning.
+
+📊 Uncertainty-Aware Forecasting
+
+Provide prediction uncertainty alongside demand forecasts.
+
+🌡️ IoT Food Monitoring
+
+Optional sensors could monitor:
+
+temperature
+humidity
+storage conditions
+🎁 Volunteer Incentives
+
+Introduce reward/incentive mechanisms.
+
+🌱 Rural Deployment
+
+Adapt the platform for rural and low-connectivity environments.
+
+🔐 Federated Learning
+
+Explore privacy-preserving distributed model training.
+
+🧠 Continuous Learning
+
+Allow models to evolve as more operational data becomes available.
+
+📈 Advanced Analytics
+
+Expand operational analytics for:
+
+regional food demand
+NGO capacity
+delivery efficiency
+volunteer utilization
+food waste reduction
+🔬 Research Contribution
+
+FoodBridge combines several components that are often treated independently:
+
+Food Risk
+     +
+Demand Forecasting
+     +
+NGO Matching
+     +
+Explainable AI
+     +
+Expiry-Aware Routing
+     +
+Real-Time GPS
+     +
+WebSocket Tracking
+     +
+Receipt Verification
+
+The primary research contribution is therefore the integration of AI-assisted decision support with real-time food redistribution logistics.
+
+🧑‍🤝‍🧑 Human-Centered Design
+
+FoodBridge is designed around three major operational participants:
+
 DONOR
   │
-  │ Create Food Donation
+  │ Surplus Food
   ▼
-AI FOOD ASSESSMENT
+NGO
   │
-  ├── Image / Quality Assessment
-  ├── Food Risk Estimation
-  └── Degradation / Freshness Estimation
-  │
+  │ Distribution
   ▼
-NGO MATCHING
+VOLUNTEER
   │
-  ├── Distance
-  ├── Capacity
-  ├── Food Compatibility
-  ├── Freshness / Safety
-  └── Other contextual factors
-  │
+  │ Delivery
   ▼
-NGO ACCEPTANCE
-  │
-  ▼
-VOLUNTEER ASSIGNMENT
-  │
-  ▼
-EXPIRY-AWARE ROUTING
-  │
-  ├── Google Routes
-  ├── Route Geometry
-  ├── Distance
-  ├── ETA
-  └── Degradation / lateness penalty
-  │
-  ▼
-LIVE DELIVERY
-  │
-  ├── Real GPS
-  ├── WebSocket Updates
-  ├── Google Maps
-  └── Cross-role Synchronization
-  │
-  ▼
-DELIVERY COMPLETION
-  │
-  ▼
-NGO RECEIPT VERIFICATION
-  │
-  ▼
-FEEDBACK / IMPACT
+COMMUNITY
+
+AI supports these users rather than replacing them.
+
+🛡️ Privacy and Secret Management
+
+The GitHub repository intentionally excludes local secrets and generated runtime files.
+
+Do not commit:
+
+.env
+backend/.env
+frontend/.env
+*.db
+uploads/
+node_modules/
+dist/
+__pycache__/
+.pytest_cache/
+
+API credentials should be configured locally.
+
+If a secret is accidentally committed, revoke/rotate it immediately.
+
+📋 Example User Journey
+
+A complete example:
+
+1. Donor creates a food donation
+        ↓
+2. Donor uploads food image
+        ↓
+3. AI assesses food quality
+        ↓
+4. Risk/freshness information is generated
+        ↓
+5. FoodBridge identifies potential NGOs
+        ↓
+6. NGO reviews the recommendation
+        ↓
+7. NGO accepts the donation
+        ↓
+8. Available volunteer is assigned
+        ↓
+9. Delivery route is generated
+        ↓
+10. Volunteer starts delivery
+        ↓
+11. Device GPS starts providing location
+        ↓
+12. Location is sent through WebSocket
+        ↓
+13. Donor sees live delivery
+        ↓
+14. NGO sees live delivery
+        ↓
+15. Admin can monitor delivery
+        ↓
+16. Volunteer completes delivery
+        ↓
+17. NGO verifies receipt
+        ↓
+18. Feedback is submitted
+        ↓
+19. Impact/history is updated
+📌 Important Developer Notes
+Do Not Commit Secrets
+
+Never commit real:
+
+Google API keys
+Groq API keys
+Azure credentials
+JWT secrets
+passwords
+access tokens
+Google Maps Configuration
+
+Google Maps and Google Routes functionality requires appropriate Google Maps Platform configuration.
+
+Make sure the required APIs are enabled and the configured key has appropriate restrictions.
+
+AI Configuration
+
+The AI assistant requires a supported configured LLM provider and model.
+
+Use the current values in the project's .env.example and application configuration.
+
+Do not assume that an old model name remains available.
+
+Database
+
+The application uses SQLite by default.
+
+The local database is intentionally not included in Git.
+
+A fresh developer should allow the application to initialize its local database according to the current backend setup/migration behavior.
+
+🧑‍💻 Development Workflow
+
+Recommended workflow:
+
+Clone Repository
+      ↓
+Create Environment
+      ↓
+Install Dependencies
+      ↓
+Configure API Keys
+      ↓
+Start Backend
+      ↓
+Start Frontend
+      ↓
+Test Application
+      ↓
+Run Backend Tests
+      ↓
+Build Frontend
+
+Before committing future changes:
+
+git status
+
+Then verify that no secrets or generated files are staged.
+
+🧪 Recommended Verification Commands
+Backend
+cd backend
+pytest -q
+Frontend
+cd frontend
+npm run build
+Git Status
+git status
+🎓 Academic Context
+
+FoodBridge was developed as a final-year academic project in the field of:
+
+Computer Science and Engineering
+Artificial Intelligence
+Machine Learning
+Web Technologies
+Optimization
+Geospatial Computing
+Real-Time Systems
+Human-Centered AI
+
+The project demonstrates how these technologies can be integrated into a practical surplus food redistribution platform.
+
+📚 Research Paper
+
+FoodBridge is associated with the research work:
+
+FoodBridge: An Intelligent AI-Driven Platform for Surplus Food Redistribution, Demand Forecasting, and Expiry-Aware Logistics
+
+The research work discusses:
+
+hybrid demand forecasting
+AI-assisted NGO matching
+food-risk estimation
+expiry-aware logistics
+real-time coordination
+experimental evaluation
+👨‍💻 Contributors
+FoodBridge Team
+
+Vejay Varun P
+
+Varun PV
+
+Yashwanth TH
+
+Harsha K Gurumallesh
+
+Department
+
+Department of Computer Science and Engineering
+
+Vidyavardhaka College of Engineering, Mysuru
+
+🏆 Project Highlights
+
+FoodBridge brings together:
+
+┌───────────────────────────────────────────────┐
+│                  FOODBRIDGE                   │
+├───────────────────────────────────────────────┤
+│                                               │
+│  🤖 AI Food Assessment                        │
+│  📊 Demand Forecasting                        │
+│  🧠 XGBoost Matching                          │
+│  📈 SHAP Explainability                       │
+│  ⏱️ Degradation / Expiry Awareness            │
+│  🛣️ Intelligent Routing                       │
+│  🗺️ Google Maps + Google Routes               │
+│  📍 Real GPS Tracking                         │
+│  🔌 WebSocket Live Updates                    │
+│  👤 Donor Dashboard                           │
+│  🏢 NGO Dashboard                             │
+│  🚴 Volunteer Dashboard                       │
+│  🛡️ Admin Dashboard                           │
+│  🧾 Receipt Verification                       │
+│  ⭐ Feedback & Impact                          │
+│  🤖 Multilingual AI Assistant                 │
+│                                               │
+└───────────────────────────────────────────────┘
+🌱 Vision
+
+FoodBridge aims to demonstrate that surplus food redistribution can be improved by combining:
+
+Artificial Intelligence
+        +
+Human Decision Making
+        +
+Intelligent Logistics
+        +
+Real-Time Communication
+        +
+Geospatial Technology
+
+The long-term vision is a system where surplus food can be identified, assessed, matched, transported, tracked, and verified through one coordinated platform.
+
+⭐ FoodBridge
+Donate → Assess → Match → Assign → Route → Track → Deliver → Verify → Impact
+
+FoodBridge connects surplus food with organizations and communities that can put it to meaningful use.
+
+📄 License
+
+This project is developed as an academic/final-year project.
+
+Unless a specific open-source license is added to the repository, the project should be treated as an academic project rather than as software released under a standard open-source license.
+
+
+### One thing before you paste it
+
+Because your current GitHub repository already has a README, you can replace it directly:
+
+```text
+FoodBridge-Final
+    ↓
+README.md
+    ↓
+Edit
+    ↓
+Ctrl+A
+    ↓
+Paste the complete README above
+    ↓
+Commit changes
+
